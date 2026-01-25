@@ -3,6 +3,50 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              Background="White">
     <Border Padding="20">
-        <TextBlock Text="Videos" FontSize="24" FontWeight="Bold" />
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <!-- Toolbar -->
+            <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,15">
+                <Button Content="? Add Video" Padding="10,5" Background="#0078D4" Foreground="White" Margin="0,0,10,0"
+                        Command="{Binding ImportCommand}" />
+                <Button Content="??? Remove" Padding="10,5" Background="#D32F2F" Foreground="White" Margin="0,0,10,0"
+                        Command="{Binding RemoveCommand}" />
+                <Button Content="? Set as Default" Padding="10,5" Background="#FFA500" Foreground="White"
+                        Command="{Binding SetDefaultCommand}" />
+            </StackPanel>
+
+            <!-- Videos List -->
+            <ListBox Grid.Row="1" ItemsSource="{Binding Videos}" SelectedItem="{Binding SelectedMedia}" Background="#F5F5F5">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <Border Padding="10" BorderBrush="#DDD" BorderThickness="0,0,0,1">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="80" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+
+                                <!-- Thumbnail placeholder -->
+                                <Rectangle Grid.Column="0" Width="80" Height="45" Fill="#CCC" Margin="0,0,10,0" />
+
+                                <!-- Video info -->
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding DisplayName}" FontWeight="Bold" FontSize="13" />
+                                    <TextBlock Text="{Binding DateAdded, StringFormat='Added: {0:yyyy-MM-dd HH:mm:ss}'}" FontSize="11" Foreground="#666" Margin="0,3,0,0" />
+                                </StackPanel>
+
+                                <!-- Empty space -->
+                                <TextBlock Grid.Column="2" VerticalAlignment="Center" Margin="10,0,0,0" />
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </Grid>
     </Border>
 </UserControl>

@@ -120,5 +120,8 @@ public partial class App : Application
         services.AddSingleton<VideosView>();
         services.AddSingleton<LogsView>();
         services.AddSingleton<SettingsView>();
+
+        // Register ViewModels
+        services.AddSingleton<SnowblindModPlayer.ViewModels.VideosViewModel>();
     }
 }

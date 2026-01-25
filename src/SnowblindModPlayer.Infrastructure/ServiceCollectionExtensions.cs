@@ -23,6 +23,9 @@ public static class ServiceCollectionExtensions
         // Register LibraryService
         services.AddSingleton<ILibraryService, LibraryService>();
         
+        // Register ImportService
+        services.AddSingleton<IImportService, ImportService>();
+        
         services.AddSingleton<IThumbnailService, ThumbnailService>();
         services.AddSingleton<ILoggingService, LoggingService>();
         services.AddSingleton<IMonitorService, MonitorService>();

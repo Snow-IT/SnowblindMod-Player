@@ -4,6 +4,7 @@ public interface ILibraryService
 {
     Task<IReadOnlyList<MediaItem>> GetAllMediaAsync();
     Task<MediaItem?> GetMediaByIdAsync(string id);
+    Task<MediaItem?> GetMediaByOriginalPathAsync(string originalPath);
     Task AddMediaAsync(MediaItem media);
     Task RemoveMediaAsync(string id);
     Task SetDefaultVideoAsync(string? videoId);

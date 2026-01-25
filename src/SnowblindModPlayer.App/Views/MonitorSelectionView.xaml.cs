@@ -38,17 +38,22 @@ public partial class MonitorSelectionView : UserControl
         int totalHeight = maxY - minY;
 
         // Scale factor to fit in canvas
-        double canvasWidth = MonitorCanvas.ActualWidth - 20;
-        double canvasHeight = MonitorCanvas.ActualHeight - 20;
+        // Note: WPF canvas has origin at top-left. Windows display arrangement uses an upward Y axis
+        // in the sense that negative Y is "above" primary. To match the mental model, we flip Y.
+        double canvasWidth = Math.Max(0, MonitorCanvas.ActualWidth - 20);
+        double canvasHeight = Math.Max(0, MonitorCanvas.ActualHeight - 20);
         double scaleX = canvasWidth / totalWidth;
         double scaleY = canvasHeight / totalHeight;
-        double scale = Math.Min(Math.Min(scaleX, scaleY), 0.5); // Cap at 0.5 to avoid huge rectangles
+        var scale = Math.Min(scaleX, scaleY);
+        if (double.IsNaN(scale) || double.IsInfinity(scale) || scale <= 0)
+            scale = 0.1;
 
         // Draw each monitor
         foreach (var monitor in monitors)
         {
             double x = (monitor.X - minX) * scale + 10;
-            double y = (monitor.Y - minY) * scale + 10;
+            // Flip Y: monitors with smaller Y (incl. negative) appear above.
+            double y = (maxY - (monitor.Y + monitor.Height)) * scale + 10;
             double width = monitor.Width * scale;
             double height = monitor.Height * scale;
 
