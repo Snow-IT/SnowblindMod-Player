@@ -1,0 +1,62 @@
+name: Release (Portable ZIP)
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: windows-latest
+
+    env:
+      PROJECT_PATH: src/SnowblindModPlayer.App/SnowblindModPlayer.App.csproj
+      APP_NAME: SnowblindModPlayer
+      RUNTIME: win-x64
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Restore
+        run: dotnet restore ${{ env.PROJECT_PATH }}
+
+      - name: Publish (self-contained)
+        run: >
+          dotnet publish ${{ env.PROJECT_PATH }}
+          -c Release
+          -r ${{ env.RUNTIME }}
+          --self-contained true
+          -p:PublishSingleFile=false
+          -p:PublishReadyToRun=true
+          -o publish
+
+      - name: Prepare release folder
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path release | Out-Null
+          Copy-Item -Recurse -Force publish\* release
+      - name: Create ZIP
+        shell: pwsh
+        run: |
+          $tag = "${{ github.ref_name }}"
+          $zipName = "${{ env.APP_NAME }}-$tag-${{ env.RUNTIME }}.zip"
+          if (Test-Path $zipName) { Remove-Item $zipName -Force }
+          Compress-Archive -Path release\* -DestinationPath $zipName
+          echo "ZIP_NAME=$zipName" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Create GitHub Release + Upload Asset
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ env.ZIP_NAME }}
+          name: ${{ github.ref_name }}
+          tag_name: ${{ github.ref_name }}
+          generate_release_notes: true
