@@ -1,8 +1,9 @@
 <UserControl x:Class="SnowblindModPlayer.Views.VideosView"
-             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:converters="clr-namespace:SnowblindModPlayer.Converters"
-             Background="Transparent">
+xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+xmlns:converters="clr-namespace:SnowblindModPlayer.Converters"
+xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
+Background="Transparent">
     <UserControl.Resources>
         <converters:ThumbnailPathToImageSourceConverter x:Key="ThumbnailConverter" />
         <converters:EqualsToVisibilityConverter x:Key="EqualsToVisibilityConverter" />
@@ -108,29 +109,41 @@
                             <DataTrigger Binding="{Binding ViewMode}" Value="Tile">
                                 <Setter Property="Content">
                                     <Setter.Value>
-                                        <ListBox ItemsSource="{Binding FilteredVideos}" SelectedItem="{Binding SelectedMedia}" BorderThickness="0" Background="Transparent"
-                                                ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                                                ScrollViewer.CanContentScroll="False" HorizontalContentAlignment="Stretch">
-                                            <ListBox.ItemsPanel>
-                                                <ItemsPanelTemplate>
-                                                    <WrapPanel IsItemsHost="True" />
-                                                </ItemsPanelTemplate>
-                                            </ListBox.ItemsPanel>
-                                            <ListBox.ItemTemplate>
-                                                <StaticResource ResourceKey="TileTemplate" />
-                                            </ListBox.ItemTemplate>
-                                        </ListBox>
+                        <ListBox ItemsSource="{Binding FilteredVideos}" SelectedItem="{Binding SelectedMedia}" BorderThickness="0" Background="Transparent"
+                                ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                ScrollViewer.CanContentScroll="False" HorizontalContentAlignment="Stretch">
+                            <i:Interaction.Triggers>
+                                <i:EventTrigger EventName="MouseDoubleClick">
+                                    <i:InvokeCommandAction Command="{Binding PlaySelectedCommand}" />
+                                </i:EventTrigger>
+                            </i:Interaction.Triggers>
+                            <ListBox.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel Orientation="Horizontal" />
+                                </ItemsPanelTemplate>
+                            </ListBox.ItemsPanel>
+                            <ListBox.ItemTemplate>
+                                <StaticResource ResourceKey="TileTemplate" />
+                            </ListBox.ItemTemplate>
+                        </ListBox>
                                     </Setter.Value>
                                 </Setter>
                             </DataTrigger>
                             <DataTrigger Binding="{Binding ViewMode}" Value="List">
                                 <Setter Property="Content">
                                     <Setter.Value>
-                                        <ListBox ItemsSource="{Binding FilteredVideos}" SelectedItem="{Binding SelectedMedia}">
-                                            <ListBox.ItemTemplate>
-                                                <StaticResource ResourceKey="ListTemplate" />
-                                            </ListBox.ItemTemplate>
-                                        </ListBox>
+                        <ListBox ItemsSource="{Binding FilteredVideos}" SelectedItem="{Binding SelectedMedia}" BorderThickness="0" Background="Transparent"
+                                ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                ScrollViewer.CanContentScroll="False">
+                            <i:Interaction.Triggers>
+                                <i:EventTrigger EventName="MouseDoubleClick">
+                                    <i:InvokeCommandAction Command="{Binding PlaySelectedCommand}" />
+                                </i:EventTrigger>
+                            </i:Interaction.Triggers>
+                            <ListBox.ItemTemplate>
+                                <StaticResource ResourceKey="ListTemplate" />
+                            </ListBox.ItemTemplate>
+                        </ListBox>
                                     </Setter.Value>
                                 </Setter>
                             </DataTrigger>
@@ -138,10 +151,6 @@
                     </Style>
                 </ContentControl.Style>
             </ContentControl>
-        </Border>
-
-        <Border Grid.Row="2" Background="{DynamicResource Brush.Bg1}" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,1,0,0">
-            <TextBlock Text="Double click to play a video" Foreground="{DynamicResource Brush.TextMuted}" HorizontalAlignment="Center" Margin="0,10" />
         </Border>
     </Grid>
 </UserControl>

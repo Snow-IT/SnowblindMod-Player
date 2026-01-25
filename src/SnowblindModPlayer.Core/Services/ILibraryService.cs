@@ -1,16 +1,6 @@
-namespace SnowblindModPlayer.Core.Services;
+using SnowblindModPlayer.Core.Services;
 
-public interface ILibraryService
-{
-    Task<IReadOnlyList<MediaItem>> GetAllMediaAsync();
-    Task<MediaItem?> GetMediaByIdAsync(string id);
-    Task<MediaItem?> GetMediaByOriginalPathAsync(string originalPath);
-    Task AddMediaAsync(MediaItem media);
-    Task RemoveMediaAsync(string id);
-    Task SetDefaultVideoAsync(string? videoId);
-    Task<MediaItem?> GetDefaultVideoAsync();
-    Task CleanupOrphanedEntriesAsync();
-}
+namespace SnowblindModPlayer.Core.Services;
 
 public class MediaItem
 {
@@ -20,4 +10,47 @@ public class MediaItem
     public string StoredPath { get; set; } = string.Empty;
     public DateTime DateAdded { get; set; } = DateTime.UtcNow;
     public string ThumbnailPath { get; set; } = string.Empty;
+}
+
+public interface ILibraryService
+{
+    /// <summary>
+    /// Get all media items ordered by DateAdded (newest first).
+    /// </summary>
+    Task<IReadOnlyList<MediaItem>> GetAllMediaAsync();
+
+    /// <summary>
+    /// Get a specific media item by ID.
+    /// </summary>
+    Task<MediaItem?> GetMediaByIdAsync(string id);
+
+    /// <summary>
+    /// Get media item by original source path (for duplicate detection).
+    /// </summary>
+    Task<MediaItem?> GetMediaByOriginalPathAsync(string originalSourcePath);
+
+    /// <summary>
+    /// Add a new media item to the library.
+    /// </summary>
+    Task AddMediaAsync(MediaItem media);
+
+    /// <summary>
+    /// Remove a media item and its files.
+    /// </summary>
+    Task RemoveMediaAsync(string id);
+
+    /// <summary>
+    /// Set the default video for autoplay.
+    /// </summary>
+    Task SetDefaultVideoAsync(string? videoId);
+
+    /// <summary>
+    /// Get the default video for autoplay.
+    /// </summary>
+    Task<MediaItem?> GetDefaultVideoAsync();
+
+    /// <summary>
+    /// Remove orphaned database entries (E1 cleanup).
+    /// </summary>
+    Task CleanupOrphanedEntriesAsync();
 }

@@ -7,6 +7,7 @@ namespace SnowblindModPlayer.UI.ViewModels;
 public class MonitorSelectionViewModel : ViewModelBase
 {
     private readonly IMonitorService _monitorService;
+    private readonly ISettingsService _settingsService;
     private ObservableCollection<MonitorInfo> _availableMonitors = new();
     private MonitorInfo? _selectedMonitor;
 
@@ -25,13 +26,19 @@ public class MonitorSelectionViewModel : ViewModelBase
             if (value != null)
             {
                 _monitorService.SelectMonitor(value.Id);
+                // Persist to disk immediately
+                _ = _settingsService.SaveAsync();
             }
         }
     }
 
-    public MonitorSelectionViewModel(IMonitorService monitorService)
+    public RelayCommand<MonitorInfo> SelectMonitorCommand { get; }
+
+    public MonitorSelectionViewModel(IMonitorService monitorService, ISettingsService settingsService)
     {
         _monitorService = monitorService;
+        _settingsService = settingsService;
+        SelectMonitorCommand = new RelayCommand<MonitorInfo>(SelectMonitorExecute);
         LoadMonitors();
     }
 
@@ -45,6 +52,14 @@ public class MonitorSelectionViewModel : ViewModelBase
         {
             _selectedMonitor = monitors.FirstOrDefault(m => m.Id == selected.Id);
             OnPropertyChanged(nameof(SelectedMonitor));
+        }
+    }
+
+    private void SelectMonitorExecute(MonitorInfo? monitor)
+    {
+        if (monitor != null)
+        {
+            SelectedMonitor = monitor;
         }
     }
 

@@ -135,8 +135,8 @@ public partial class App : Application
         // Register UI services and ViewModels
         services.AddSingleton<MainWindow>();
         services.AddSingleton<SnowblindModPlayer.ViewModels.MainWindowViewModel>();
-        services.AddSingleton<PlayerWindow>();
-        services.AddSingleton<PlayerWindowViewModel>();
+        services.AddTransient<PlayerWindow>();
+        services.AddTransient<PlayerWindowViewModel>();
         services.AddSingleton<MonitorSelectionViewModel>();
 
         // Register Views

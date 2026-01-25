@@ -6,6 +6,8 @@ using Microsoft.Win32;
 using SnowblindModPlayer.Core.Services;
 using SnowblindModPlayer.Infrastructure.Services;
 using SnowblindModPlayer.UI.MVVM;
+using SnowblindModPlayer.UI.ViewModels;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace SnowblindModPlayer.ViewModels;
 
@@ -14,7 +16,10 @@ public class VideosViewModel : ViewModelBase
     private readonly ILibraryService _libraryService;
     private readonly IImportService _importService;
     private readonly ISettingsService _settingsService;
+    private readonly IPlaybackService _playbackService;
+    private readonly IServiceProvider _serviceProvider;
     private ObservableCollection<MediaItem> _videos = new();
+    private PlayerWindow? _activePlayerWindow;
     private MediaItem? _selectedMedia;
     private readonly ICollectionView _filteredVideos;
     private string _searchText = string.Empty;
@@ -75,12 +80,20 @@ public class VideosViewModel : ViewModelBase
     public RelayCommand ImportCommand { get; }
     public RelayCommand RemoveCommand { get; }
     public RelayCommand SetDefaultCommand { get; }
+    public RelayCommand PlaySelectedCommand { get; }
 
-    public VideosViewModel(ILibraryService libraryService, IImportService importService, ISettingsService settingsService)
+    public VideosViewModel(
+        ILibraryService libraryService,
+        IImportService importService,
+        ISettingsService settingsService,
+        IPlaybackService playbackService,
+        IServiceProvider serviceProvider)
     {
         _libraryService = libraryService;
         _importService = importService;
         _settingsService = settingsService;
+        _playbackService = playbackService;
+        _serviceProvider = serviceProvider;
 
         _filteredVideos = CollectionViewSource.GetDefaultView(_videos);
         _filteredVideos.Filter = FilterVideo;
@@ -90,24 +103,7 @@ public class VideosViewModel : ViewModelBase
         ImportCommand = new RelayCommand(_ => ImportVideosAsync());
         RemoveCommand = new RelayCommand(_ => RemoveSelectedAsync());
         SetDefaultCommand = new RelayCommand(_ => SetAsDefaultAsync());
-
-        DefaultVideoId = _settingsService.GetDefaultVideoId();
-
-        _settingsService.RegisterLiveUpdate<string>("VideosViewMode", mode =>
-        {
-            Application.Current.Dispatcher.Invoke(() =>
-            {
-                if (_viewModes.Contains(mode) && !string.Equals(_viewMode, mode, StringComparison.Ordinal))
-                    SetProperty(ref _viewMode, mode);
-            });
-        });
-
-        _settingsService.RegisterLiveUpdate<string>("DefaultVideoId", id =>
-        {
-            Application.Current.Dispatcher.Invoke(() => DefaultVideoId = id);
-        });
-
-        _ = LoadVideosAsync();
+        PlaySelectedCommand = new RelayCommand(_ => PlaySelectedAsync());
     }
 
     private bool FilterVideo(object obj)
@@ -121,7 +117,7 @@ public class VideosViewModel : ViewModelBase
         return item.DisplayName?.Contains(SearchText, StringComparison.OrdinalIgnoreCase) == true;
     }
 
-    private async Task LoadVideosAsync()
+    public async Task LoadVideosAsync()
     {
         try
         {
@@ -239,12 +235,12 @@ public class VideosViewModel : ViewModelBase
         {
             var selectedId = SelectedMedia.Id;
             var selectedName = SelectedMedia.DisplayName; // Capture name before reload
-            
+
             await _libraryService.SetDefaultVideoAsync(selectedId);
             DefaultVideoId = selectedId;
             _ = _settingsService.SaveAsync();
             await LoadVideosAsync();
-            
+
             MessageBox.Show(
                 $"\"{selectedName}\" is now set as the default video",
                 "Success",
@@ -261,4 +257,34 @@ public class VideosViewModel : ViewModelBase
                 MessageBoxImage.Error);
         }
     }
+
+    private async void PlaySelectedAsync()
+    {
+        if (SelectedMedia == null || string.IsNullOrEmpty(SelectedMedia.StoredPath))
+            return;
+
+        try
+        {
+            // Reuse existing PlayerWindow if open, otherwise create new
+            if (_activePlayerWindow == null || !_activePlayerWindow.IsLoaded)
+            {
+                var playerWindow = _serviceProvider.GetRequiredService<PlayerWindow>();
+                var vm = _serviceProvider.GetRequiredService<PlayerWindowViewModel>();
+                playerWindow.DataContext = vm;
+                playerWindow.Closed += (s, e) => _activePlayerWindow = null;
+                _activePlayerWindow = playerWindow;
+                playerWindow.Show();
+            }
+
+            _activePlayerWindow.Activate();
+            _activePlayerWindow.Focus();
+            await _activePlayerWindow.LoadVideoAsync(SelectedMedia.StoredPath);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Playback error: {ex.Message}");
+            MessageBox.Show($"Failed to play video: {ex.Message}", "Playback Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
 }
+

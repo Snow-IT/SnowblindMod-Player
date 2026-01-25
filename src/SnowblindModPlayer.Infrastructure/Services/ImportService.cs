@@ -6,7 +6,7 @@ public class ImportService : IImportService
 {
     private readonly ILibraryService _libraryService;
     private readonly ISettingsService _settingsService;
-    private readonly IThumbnailService _thumbnailService;
+    private readonly IThumbnailQueueService _thumbnailQueueService;
     private readonly IAppDataPathService _appDataPathService;
 
     public IReadOnlySet<string> SupportedExtensions { get; } = 
@@ -15,12 +15,12 @@ public class ImportService : IImportService
     public ImportService(
         ILibraryService libraryService,
         ISettingsService settingsService,
-        IThumbnailService thumbnailService,
+        IThumbnailQueueService thumbnailQueueService,
         IAppDataPathService appDataPathService)
     {
         _libraryService = libraryService;
         _settingsService = settingsService;
-        _thumbnailService = thumbnailService;
+        _thumbnailQueueService = thumbnailQueueService;
         _appDataPathService = appDataPathService;
     }
 
@@ -101,19 +101,19 @@ public class ImportService : IImportService
                     ThumbnailPath = string.Empty // Will be set after thumbnail generation
                 };
 
-                // Step 6: Generate thumbnail (fire and forget for now, enhanced queue in future)
+                // Step 6: Generate thumbnail (via queue for max 1 parallel + timeout/retry)
                 try
                 {
                     var thumbnailFolder = Path.Combine(mediaFolder, ".thumbnails");
                     Directory.CreateDirectory(thumbnailFolder);
                     var thumbnailPath = Path.Combine(thumbnailFolder, $"{mediaItem.Id}.jpg");
                     
-                    await _thumbnailService.GenerateThumbnailAsync(destinationPath, thumbnailPath);
+                    await _thumbnailQueueService.EnqueueThumbnailAsync(destinationPath, thumbnailPath);
                     mediaItem.ThumbnailPath = thumbnailPath;
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"Thumbnail generation failed: {ex.Message}");
+                    System.Diagnostics.Debug.WriteLine($"Thumbnail queueing failed: {ex.Message}");
                     // Continue without thumbnail - import still succeeds
                 }
 

@@ -11,6 +11,8 @@ public static class SettingsServiceExtensions
     private const string MutedKey = "Muted";
     private const string LoopEnabledKey = "LoopEnabled";
     private const string FillScreenKey = "FillScreen";
+    private const string FullscreenOnStartKey = "FullscreenOnStart";
+    private const string ScalingModeKey = "ScalingMode";
     private const string ThemePreferenceKey = "ThemePreference";
     private const string VideosViewModeKey = "VideosViewMode";
 
@@ -102,6 +104,26 @@ public static class SettingsServiceExtensions
     public static void SetVideosViewMode(this ISettingsService settings, string mode)
     {
         settings.Set(VideosViewModeKey, mode);
+    }
+
+    public static bool GetFullscreenOnStart(this ISettingsService settings)
+    {
+        return settings.Get(FullscreenOnStartKey, true);
+    }
+
+    public static void SetFullscreenOnStart(this ISettingsService settings, bool fullscreen)
+    {
+        settings.Set(FullscreenOnStartKey, fullscreen);
+    }
+
+    public static string GetScalingMode(this ISettingsService settings)
+    {
+        return settings.Get(ScalingModeKey, "Fill");
+    }
+
+    public static void SetScalingMode(this ISettingsService settings, string mode)
+    {
+        settings.Set(ScalingModeKey, mode);
     }
 
     private static string GetDefaultMediaFolder()

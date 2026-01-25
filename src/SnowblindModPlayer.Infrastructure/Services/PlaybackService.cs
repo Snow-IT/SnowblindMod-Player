@@ -1,73 +1,153 @@
+using System.Globalization;
+using System.Threading.Tasks;
+using LibVLCSharp.Shared;
 using SnowblindModPlayer.Core.Services;
 
 namespace SnowblindModPlayer.Infrastructure.Services;
 
 public class PlaybackService : IPlaybackService
 {
-    private IntPtr _windowHandle;
+    private readonly LibVLC _libVLC;
+    private readonly MediaPlayer _mediaPlayer;
     private long _currentPositionMs;
     private long _durationMs;
-    private bool _isPlaying;
-    private bool _isMuted;
-    private int _volumePercent = 50;
+    private string _currentMediaPath = string.Empty;
+    private bool _mediaLoaded;
+    private Media? _currentMedia;
+    private bool _loopEnabled;
+    private Action<Func<Task>>? _uiDispatcher;
 
     public long CurrentPositionMs => _currentPositionMs;
     public long DurationMs => _durationMs;
-    public bool IsPlaying => _isPlaying;
-    public bool IsMuted => _isMuted;
-    public int VolumePercent => _volumePercent;
+    public bool IsPlaying => _mediaPlayer.IsPlaying;
+    public bool IsMuted => _mediaPlayer.Mute;
+    public int VolumePercent => _mediaPlayer.Volume;
 
     public event EventHandler? PlayingStateChanged;
     public event EventHandler? PlaybackPositionChanged;
     public event EventHandler? VolumeChanged;
     public event EventHandler? MediaEnded;
+    public event EventHandler? MediaEndReached;  // Exposed for external loop handling
+
+    public LibVLCSharp.Shared.MediaPlayer MediaPlayer => _mediaPlayer;
 
     public PlaybackService()
     {
-        // Initialize would happen here with proper LibVLC setup
+        LibVLCSharp.Shared.Core.Initialize();
+        _libVLC = new LibVLCSharp.Shared.LibVLC(
+            "--no-osd",           // Disable OSD completely
+            "--no-video-title-show",
+            "--quiet"
+        );
+        _mediaPlayer = new LibVLCSharp.Shared.MediaPlayer(_libVLC);
+
+        _mediaPlayer.LengthChanged += (s, e) =>
+        {
+            _durationMs = e.Length;
+            PlaybackPositionChanged?.Invoke(this, EventArgs.Empty);
+        };
+        _mediaPlayer.PositionChanged += (s, e) =>
+        {
+            _currentPositionMs = (long)(_durationMs * e.Position);
+            PlaybackPositionChanged?.Invoke(this, EventArgs.Empty);
+        };
+        _mediaPlayer.EndReached += async (s, e) =>
+        {
+            if (_loopEnabled && _mediaLoaded && !string.IsNullOrEmpty(_currentMediaPath))
+            {
+                if (_uiDispatcher != null)
+                {
+                    _uiDispatcher(async () =>
+                    {
+                        await Task.Delay(100);
+                        try
+                        {
+                            _mediaPlayer.Stop();
+                            _mediaPlayer.Time = 0;
+                            _mediaPlayer.Play();
+                            System.Diagnostics.Debug.WriteLine("Loop: Restarted (Stop ? Time=0 ? Play)");
+                        }
+                        catch (Exception ex)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"Loop restart failed: {ex}");
+                        }
+                    });
+                    return;  // Don't fire MediaEnded when looping succeeds
+                }
+            }
+
+            // Only fire MediaEnded if not looping or loop setup failed
+            MediaEndReached?.Invoke(this, EventArgs.Empty);
+        };
+        _mediaPlayer.Playing += (s, e) => PlayingStateChanged?.Invoke(this, EventArgs.Empty);
+        _mediaPlayer.Paused += (s, e) => PlayingStateChanged?.Invoke(this, EventArgs.Empty);
+        _mediaPlayer.Stopped += (s, e) => PlayingStateChanged?.Invoke(this, EventArgs.Empty);
+        _mediaPlayer.VolumeChanged += (s, e) => VolumeChanged?.Invoke(this, EventArgs.Empty);
     }
 
-    public void SetWindowHandle(IntPtr windowHandle)
-    {
-        _windowHandle = windowHandle;
-    }
+    public void SetWindowHandle(IntPtr windowHandle) { }
+    public IntPtr GetWindowHandle() => IntPtr.Zero;
 
-    public IntPtr GetWindowHandle()
+    public void SetUIDispatcher(Action<Func<Task>> dispatcher)
     {
-        return _windowHandle;
+        _uiDispatcher = dispatcher;
     }
 
     public Task PlayAsync(string videoPath)
     {
-        if (string.IsNullOrEmpty(videoPath))
+        if (string.IsNullOrWhiteSpace(videoPath))
             return Task.CompletedTask;
 
         try
         {
-            // TODO: Implement LibVLC playback with the window handle
-            _isPlaying = true;
-            PlayingStateChanged?.Invoke(this, EventArgs.Empty);
+            LoadMedia(videoPath);
+            _mediaPlayer.Play();
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Play failed: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"Play failed: {ex}");
         }
 
         return Task.CompletedTask;
     }
 
-    public Task PauseAsync()
+    private void LoadMedia(string videoPath)
     {
-        try
+        if (_mediaPlayer.IsPlaying)
         {
-            _isPlaying = false;
-            PlayingStateChanged?.Invoke(this, EventArgs.Empty);
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"Pause failed: {ex.Message}");
+            _mediaPlayer.Stop();
         }
 
+        _currentMedia?.Dispose();
+        _currentMediaPath = videoPath;
+        _currentMedia = CreateConfiguredMedia(videoPath);
+        _mediaPlayer.Media = _currentMedia;
+        _mediaLoaded = true;
+        _currentPositionMs = 0;
+    }
+
+    private Media CreateConfiguredMedia(string videoPath)
+    {
+        var media = new Media(_libVLC, videoPath, FromType.FromPath);
+
+        // Disable all OSD and UI elements
+        media.AddOption(":no-osd");
+        media.AddOption(":no-video-title-show");
+        media.AddOption(":quiet");
+        media.AddOption(":disable-lua");  // Disable Lua (can create UI elements)
+        
+        return media;
+    }
+
+    public void SetLoopEnabled(bool enabled)
+    {
+        _loopEnabled = enabled;
+        System.Diagnostics.Debug.WriteLine($"Loop set to: {(enabled ? "ON" : "OFF")}");
+    }
+
+    public Task PauseAsync()
+    {
+        try { _mediaPlayer.SetPause(true); } catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"Pause failed: {ex}"); }
         return Task.CompletedTask;
     }
 
@@ -75,30 +155,21 @@ public class PlaybackService : IPlaybackService
     {
         try
         {
-            _isPlaying = true;
-            PlayingStateChanged?.Invoke(this, EventArgs.Empty);
+            if (_mediaLoaded)
+            {
+                if (_mediaPlayer.State == LibVLCSharp.Shared.VLCState.Paused)
+                    _mediaPlayer.SetPause(false);
+                else
+                    _mediaPlayer.Play();
+            }
         }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"Resume failed: {ex.Message}");
-        }
-
+        catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"Resume failed: {ex}"); }
         return Task.CompletedTask;
     }
 
     public Task StopAsync()
     {
-        try
-        {
-            _isPlaying = false;
-            _currentPositionMs = 0;
-            PlayingStateChanged?.Invoke(this, EventArgs.Empty);
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"Stop failed: {ex.Message}");
-        }
-
+        try { _mediaPlayer.Stop(); _currentPositionMs = 0; } catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"Stop failed: {ex}"); }
         return Task.CompletedTask;
     }
 
@@ -106,44 +177,27 @@ public class PlaybackService : IPlaybackService
     {
         try
         {
-            _currentPositionMs = Math.Max(0, positionMs);
-            PlaybackPositionChanged?.Invoke(this, EventArgs.Empty);
+            if (_durationMs > 0)
+            {
+                var pos = Math.Clamp((float)positionMs / _durationMs, 0f, 1f);
+                _mediaPlayer.Position = pos;
+            }
         }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"Seek failed: {ex.Message}");
-        }
-
+        catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"Seek failed: {ex}"); }
         return Task.CompletedTask;
     }
 
     public Task SetVolumeAsync(int volumePercent)
     {
-        try
-        {
-            _volumePercent = Math.Clamp(volumePercent, 0, 100);
-            VolumeChanged?.Invoke(this, EventArgs.Empty);
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"SetVolume failed: {ex.Message}");
-        }
-
+        try { _mediaPlayer.Volume = Math.Clamp(volumePercent, 0, 100); VolumeChanged?.Invoke(this, EventArgs.Empty); }
+        catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"SetVolume failed: {ex}"); }
         return Task.CompletedTask;
     }
 
     public Task SetMuteAsync(bool muted)
     {
-        try
-        {
-            _isMuted = muted;
-            VolumeChanged?.Invoke(this, EventArgs.Empty);
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"SetMute failed: {ex.Message}");
-        }
-
+        try { _mediaPlayer.Mute = muted; VolumeChanged?.Invoke(this, EventArgs.Empty); }
+        catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"SetMute failed: {ex}"); }
         return Task.CompletedTask;
     }
 }

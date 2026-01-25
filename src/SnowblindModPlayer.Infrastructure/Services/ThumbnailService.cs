@@ -1,3 +1,4 @@
+using LibVLCSharp.Shared;
 using SnowblindModPlayer.Core.Services;
 
 namespace SnowblindModPlayer.Infrastructure.Services;
@@ -7,6 +8,22 @@ public class ThumbnailService : IThumbnailService
     private const int ThumbnailWidth = 320;
     private const double AspectRatio = 16.0 / 9.0;
     private const int ThumbnailHeight = (int)(ThumbnailWidth / AspectRatio); // 180px
+
+    private readonly LibVLC? _libVLC;
+
+    public ThumbnailService()
+    {
+        try
+        {
+            LibVLCSharp.Shared.Core.Initialize();
+            _libVLC = new LibVLC();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"LibVLC initialization failed: {ex.Message}");
+            _libVLC = null;
+        }
+    }
 
     public async Task<string> GenerateThumbnailAsync(string videoPath, string outputPath, TimeSpan? videoDuration = null)
     {
@@ -24,36 +41,111 @@ public class ThumbnailService : IThumbnailService
                 Directory.CreateDirectory(outputDir);
             }
 
-            // For MVP: Create a simple placeholder/gray image as thumbnail
-            // In a real implementation with LibVLC, we would extract actual frame here
-            // Frame time: 5% of duration, fallback to 1 second
+            // Try VLC snapshot, fallback to placeholder
+            if (_libVLC != null)
+            {
+                if (await TryGenerateVLCSnapshotAsync(videoPath, outputPath, videoDuration))
+                {
+                    System.Diagnostics.Debug.WriteLine($"VLC thumbnail generated: {outputPath}");
+                    return outputPath;
+                }
+            }
+
+            // Fallback to placeholder
             await CreatePlaceholderThumbnailAsync(outputPath);
-            
-            System.Diagnostics.Debug.WriteLine($"Thumbnail generated: {outputPath}");
+            System.Diagnostics.Debug.WriteLine($"Placeholder thumbnail created: {outputPath}");
             return outputPath;
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Thumbnail generation failed: {ex.Message}");
-            // Return path anyway - import continues without thumbnail
+            System.Diagnostics.Debug.WriteLine($"Thumbnail generation failed, using placeholder: {ex.Message}");
+            
+            try
+            {
+                // Final fallback to placeholder
+                await CreatePlaceholderThumbnailAsync(outputPath);
+            }
+            catch (Exception placeholderEx)
+            {
+                System.Diagnostics.Debug.WriteLine($"Placeholder creation also failed: {placeholderEx.Message}");
+            }
+
             return outputPath;
+        }
+    }
+
+    private async Task<bool> TryGenerateVLCSnapshotAsync(string videoPath, string outputPath, TimeSpan? videoDuration)
+    {
+        if (_libVLC == null)
+            return false;
+
+        try
+        {
+            using var media = new Media(_libVLC, videoPath, FromType.FromPath);
+            using var mediaPlayer = new MediaPlayer(_libVLC);
+
+            mediaPlayer.Media = media;
+
+            // Parse media to get duration
+            var parseTask = media.Parse(MediaParseOptions.ParseLocal);
+            var parseStatus = parseTask.GetAwaiter().GetResult();
+
+            if (parseStatus != MediaParsedStatus.Done)
+            {
+                System.Diagnostics.Debug.WriteLine($"Failed to parse media: {videoPath}");
+                return false;
+            }
+
+            long durationMs = media.Duration;
+            if (durationMs <= 0)
+            {
+                System.Diagnostics.Debug.WriteLine($"Invalid duration for media: {videoPath}");
+                return false;
+            }
+
+            // Calculate 5% position with fallback
+            long snapshotTimeMs = (long)(durationMs * 0.05); // 5%
+            if (snapshotTimeMs < 1000) // Less than 1 second
+                snapshotTimeMs = 1000; // Fallback to 1s
+
+            System.Diagnostics.Debug.WriteLine($"Extracting snapshot at {snapshotTimeMs}ms (5% of {durationMs}ms)");
+
+            // Take snapshot
+            mediaPlayer.Play();
+
+            // Wait for playback to start and reach snapshot position
+            await Task.Delay(500); // Let playback initialize
+            mediaPlayer.Time = snapshotTimeMs;
+            await Task.Delay(500); // Let frame decode
+
+            // Save snapshot
+            bool success = mediaPlayer.TakeSnapshot(0, outputPath, ThumbnailWidth, ThumbnailHeight);
+
+            if (!success)
+            {
+                System.Diagnostics.Debug.WriteLine($"VLC snapshot failed for: {videoPath}");
+                return false;
+            }
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"VLC snapshot generation exception: {ex.Message}");
+            return false;
         }
     }
 
     /// <summary>
     /// Creates a simple gray placeholder thumbnail (320x180) as JPG.
-    /// In future: extract actual frame at 5% video duration using LibVLC.
     /// </summary>
     private async Task CreatePlaceholderThumbnailAsync(string outputPath)
     {
-        // Create a small valid JPG (1x1) as placeholder to avoid WPF decode errors.
-        // This will be replaced later by real VLC snapshot thumbnails.
         await Task.Run(() =>
         {
             Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
 
-            // Minimal 1x1 JPEG (JFIF) bytes.
-            // Source: generated once for placeholder usage.
+            // Minimal 1x1 JPEG (JFIF) bytes
             var jpg = new byte[]
             {
                 0xFF,0xD8,0xFF,0xE0,0x00,0x10,0x4A,0x46,0x49,0x46,0x00,0x01,0x01,0x01,0x00,0x48,0x00,0x48,0x00,0x00,

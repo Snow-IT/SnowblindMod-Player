@@ -4,6 +4,7 @@ using System.Windows.Input;
 using System.Windows.Threading;
 using System.Windows.Interop;
 using SnowblindModPlayer.Core.Services;
+using SnowblindModPlayer.Infrastructure.Services;
 using SnowblindModPlayer.UI.ViewModels;
 
 namespace SnowblindModPlayer;
@@ -12,41 +13,89 @@ public partial class PlayerWindow : Window
 {
     private readonly IPlaybackService _playbackService;
     private readonly IMonitorService _monitorService;
+    private readonly ISettingsService _settingsService;
     private readonly PlayerWindowViewModel _viewModel;
     private bool _isFullscreen;
     private DispatcherTimer? _updateTimer;
-    private string _currentVideoPath = string.Empty;
+    private DispatcherTimer? _osdHideTimer;
 
-    public PlayerWindow(IPlaybackService playbackService, IMonitorService monitorService, PlayerWindowViewModel viewModel)
+    public PlayerWindow(IPlaybackService playbackService, IMonitorService monitorService, ISettingsService settingsService, PlayerWindowViewModel viewModel)
     {
         InitializeComponent();
         _playbackService = playbackService;
         _monitorService = monitorService;
+        _settingsService = settingsService;
         _viewModel = viewModel;
         DataContext = _viewModel;
     }
 
     private void Window_Loaded(object sender, RoutedEventArgs e)
     {
-        // Set the window handle for the playback service
-        var handle = new WindowInteropHelper(this).Handle;
-        _playbackService.SetWindowHandle(handle);
+        // Bind LibVLC MediaPlayer to VideoView
+        if (_playbackService is PlaybackService svc)
+        {
+            VideoView.MediaPlayer = svc.MediaPlayer;
+            
+            // Register UI dispatcher for loop restarts
+            svc.SetUIDispatcher(action => Dispatcher.InvokeAsync(action));
+            
+            // Subscribe to EndReached for OSD display
+            if (_playbackService is PlaybackService playbackSvc)
+            {
+                playbackSvc.MediaEndReached += (s, e) => ShowOsd("Video Ended");
+            }
+        }
 
         // Subscribe to playback events
         _playbackService.PlayingStateChanged += PlaybackService_PlayingStateChanged;
         _playbackService.PlaybackPositionChanged += PlaybackService_PlaybackPositionChanged;
         _playbackService.MediaEnded += PlaybackService_MediaEnded;
+        _playbackService.VolumeChanged += PlaybackService_VolumeChanged;
+
+        // Wire volume slider
+        VolumeSlider.ValueChanged += VolumeSlider_ValueChanged;
+        
+        // Setup OSD hide timer
+        _osdHideTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
+        _osdHideTimer.Tick += (_, __) => { Osd.Visibility = Visibility.Collapsed; _osdHideTimer.Stop(); };
+        
+        // Load settings
+        LoadSettingsAsync();
 
         // Position window on selected monitor (or primary if none selected)
         PositionOnSelectedMonitor();
 
-        // Setup update timer for progress bar
+        // Setup update timer for progress bar and OSD
         _updateTimer = new DispatcherTimer
         {
-            Interval = TimeSpan.FromMilliseconds(100)
+            Interval = TimeSpan.FromMilliseconds(250)
         };
         _updateTimer.Tick += UpdateTimer_Tick;
         _updateTimer.Start();
+
+        // Apply fullscreen if enabled (after UI is fully initialized)
+        if (_settingsService.GetFullscreenOnStart())
+        {
+            // Defer to allow rendering to complete
+            _ = Dispatcher.BeginInvoke(new Action(() => ToggleFullscreenAsync()), DispatcherPriority.ApplicationIdle);
+        }
+    }
+
+    private async void LoadSettingsAsync()
+    {
+        // Load playback settings
+        _viewModel.LoopEnabled = _settingsService.GetLoopEnabled();
+        var volume = _settingsService.GetVolume();
+        var muted = _settingsService.GetMuted();
+        _viewModel.ScalingMode = _settingsService.GetScalingMode();
+
+        // Apply volume and mute
+        await _playbackService.SetVolumeAsync(volume);
+        VolumeSlider.Value = volume;
+        VolumeLabel.Text = $"{volume}%";
+        
+        await _playbackService.SetMuteAsync(muted);
+        VolumeSlider.IsEnabled = !muted;
     }
 
     private void PositionOnSelectedMonitor()
@@ -106,6 +155,11 @@ public partial class PlayerWindow : Window
             case Key.M:
                 e.Handled = true;
                 ToggleMuteAsync();
+                break;
+
+            case Key.L:
+                e.Handled = true;
+                ToggleLoopAsync();
                 break;
 
             case Key.F11:
@@ -179,16 +233,19 @@ public partial class PlayerWindow : Window
             if (_playbackService.IsPlaying)
             {
                 await _playbackService.PauseAsync();
+                ShowOsd("Paused");
             }
             else
             {
-                if (string.IsNullOrEmpty(_currentVideoPath))
+                if (string.IsNullOrEmpty(_viewModel.CurrentVideoPath))
                 {
                     ShowError("No video loaded");
                 }
                 else
                 {
-                    await _playbackService.ResumeAsync();
+                    // Use PlayAsync with the last loaded path to ensure resume works after pause
+                    await _playbackService.PlayAsync(_viewModel.CurrentVideoPath);
+                    ShowOsd("Playing");
                 }
             }
         }
@@ -203,6 +260,7 @@ public partial class PlayerWindow : Window
         try
         {
             await _playbackService.SeekAsync(positionMs);
+            ShowOsd($"Seek: {FormatTime(positionMs)}");
         }
         catch (Exception ex)
         {
@@ -220,8 +278,25 @@ public partial class PlayerWindow : Window
     {
         int newVolume = Math.Clamp(_playbackService.VolumePercent + deltaPercent, 0, 100);
         await _playbackService.SetVolumeAsync(newVolume);
-        VolumeSlider.Value = newVolume;
-        VolumeLabel.Text = $"{newVolume}%";
+        ShowOsd(_playbackService.IsMuted ? "Muted" : $"Vol {newVolume}%");
+    }
+
+    private async void VolumeSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (_playbackService != null)
+        {
+            await _playbackService.SetVolumeAsync((int)e.NewValue);
+        }
+    }
+
+    private void ToggleLoopAsync()
+    {
+        _viewModel.LoopEnabled = !_viewModel.LoopEnabled;
+        if (_playbackService is SnowblindModPlayer.Infrastructure.Services.PlaybackService svc)
+        {
+            svc.SetLoopEnabled(_viewModel.LoopEnabled);
+        }
+        ShowOsd(_viewModel.LoopEnabled ? "Loop: ON" : "Loop: OFF");
     }
 
     private async void ToggleMuteAsync()
@@ -229,33 +304,94 @@ public partial class PlayerWindow : Window
         bool newMuteState = !_playbackService.IsMuted;
         await _playbackService.SetMuteAsync(newMuteState);
         VolumeSlider.IsEnabled = !newMuteState;
+        ShowOsd(newMuteState ? "Muted" : $"Vol {_playbackService.VolumePercent}%");
     }
 
-    private void ToggleFullscreenAsync()
+    private async void ToggleFullscreenAsync()
     {
         _isFullscreen = !_isFullscreen;
         if (_isFullscreen)
         {
+            // Pause playback during transition to avoid rendering issues
+            var wasPlaying = false;
+            try { wasPlaying = _playbackService.IsPlaying; if (wasPlaying) await _playbackService.PauseAsync(); } catch { }
+
+            // Detach renderer before size/position changes (critical for smooth transitions)
+            try { VideoView.MediaPlayer = null; } catch { }
+
+            WindowStartupLocation = WindowStartupLocation.Manual;
+            WindowState = WindowState.Normal;
+
             var selectedMonitor = _monitorService.GetSelectedMonitor();
             if (selectedMonitor != null)
             {
-                // Fullscreen on selected monitor
-                Left = selectedMonitor.X;
-                Top = selectedMonitor.Y;
-                Width = selectedMonitor.Width;
-                Height = selectedMonitor.Height;
+                // DPI-aware conversion
+                var source = PresentationSource.FromVisual(this);
+                var transform = source?.CompositionTarget?.TransformFromDevice ?? System.Windows.Media.Matrix.Identity;
+                var topLeft = transform.Transform(new System.Windows.Point(selectedMonitor.X, selectedMonitor.Y));
+                var bottomRight = transform.Transform(new System.Windows.Point(selectedMonitor.X + selectedMonitor.Width, selectedMonitor.Y + selectedMonitor.Height));
+
+                Left = topLeft.X;
+                Top = topLeft.Y;
+                Width = Math.Max(1, bottomRight.X - topLeft.X);
+                Height = Math.Max(1, bottomRight.Y - topLeft.Y);
+            }
+            else
+            {
+                // Fallback to primary with DPI
+                var source = PresentationSource.FromVisual(this);
+                var transform = source?.CompositionTarget?.TransformFromDevice ?? System.Windows.Media.Matrix.Identity;
+                var bottomRight = transform.Transform(new System.Windows.Point(SystemParameters.PrimaryScreenWidth, SystemParameters.PrimaryScreenHeight));
+                
+                Left = 0;
+                Top = 0;
+                Width = bottomRight.X;
+                Height = bottomRight.Y;
             }
 
             WindowStyle = WindowStyle.None;
-            WindowState = WindowState.Maximized;
+            ResizeMode = ResizeMode.NoResize;
+            ShowInTaskbar = false;
+            Cursor = Cursors.None;
+            WindowState = WindowState.Normal;
+            Topmost = true;
+
+            // Re-attach renderer and resume playback
+            try
+            {
+                VideoView.MediaPlayer = _playbackService is PlaybackService svc ? svc.MediaPlayer : null;
+                if (wasPlaying)
+                {
+                    await _playbackService.ResumeAsync();
+                }
+            }
+            catch { }
+
+            ShowOsd("Fullscreen");
         }
         else
         {
+            // Detach before exit fullscreen
+            try { VideoView.MediaPlayer = null; } catch { }
+
             WindowStyle = WindowStyle.SingleBorderWindow;
+            ResizeMode = ResizeMode.CanResize;
+            ShowInTaskbar = true;
+            Cursor = Cursors.Arrow;
             WindowState = WindowState.Normal;
             Width = 900;
             Height = 600;
+            Topmost = false;
+            
+            // Re-attach and continue playing
+            try
+            {
+                VideoView.MediaPlayer = _playbackService is PlaybackService svc ? svc.MediaPlayer : null;
+            }
+            catch { }
+
             PositionOnSelectedMonitor();
+            ShowOsd("Windowed");
         }
     }
 
@@ -264,9 +400,15 @@ public partial class PlayerWindow : Window
         try
         {
             ErrorMessage.Text = string.Empty;
-            _currentVideoPath = videoPath;
-            await _playbackService.PlayAsync(videoPath);
             _viewModel.CurrentVideoPath = videoPath;
+            
+            // Apply loop setting BEFORE playing video (so Media is created with correct option)
+            if (_playbackService is SnowblindModPlayer.Infrastructure.Services.PlaybackService svc)
+            {
+                svc.SetLoopEnabled(_viewModel.LoopEnabled);
+            }
+            
+            await _playbackService.PlayAsync(videoPath);
         }
         catch (Exception ex)
         {
@@ -302,6 +444,11 @@ public partial class PlayerWindow : Window
                 ProgressBar.Value = currentTime;
 
                 TimeLabel.Text = $"{FormatTime(currentTime)} / {FormatTime(totalTime)}";
+                
+                // Also update OSD if visible
+                Progress.Maximum = 100;
+                Progress.Value = totalTime > 0 ? (currentTime * 100.0 / totalTime) : 0;
+                TimeText.Text = $"{FormatTime(currentTime)} / {FormatTime(totalTime)}";
             }
         }
         catch
@@ -322,14 +469,17 @@ public partial class PlayerWindow : Window
 
     private void PlaybackService_PlayingStateChanged(object? sender, EventArgs e)
     {
-        if (_playbackService.IsPlaying)
+        Dispatcher.InvokeAsync(() =>
         {
-            PlayPauseButton.Content = "?"; // Pause icon
-        }
-        else
-        {
-            PlayPauseButton.Content = "?"; // Play icon
-        }
+            if (_playbackService.IsPlaying)
+            {
+                PlayPauseButton.Content = "?"; // Pause
+            }
+            else
+            {
+                PlayPauseButton.Content = "?"; // Play
+            }
+        });
     }
 
     private void PlaybackService_PlaybackPositionChanged(object? sender, EventArgs e)
@@ -339,11 +489,32 @@ public partial class PlayerWindow : Window
 
     private void PlaybackService_MediaEnded(object? sender, EventArgs e)
     {
-        bool loopEnabled = _viewModel.LoopEnabled;
-        if (loopEnabled && !string.IsNullOrEmpty(_currentVideoPath))
+        // Loop is now handled directly in PlaybackService EndReached
+        // This only fires when loop is disabled or loop restart fails
+    }
+
+    private void PlaybackService_VolumeChanged(object? sender, EventArgs e)
+    {
+        Dispatcher.InvokeAsync(() =>
         {
-            _ = _playbackService.PlayAsync(_currentVideoPath);
-        }
+            VolumeSlider.Value = _playbackService.VolumePercent;
+            VolumeLabel.Text = $"{_playbackService.VolumePercent}%";
+            VolText.Text = _playbackService.IsMuted ? "Muted" : $"Vol {_playbackService.VolumePercent}%";
+        });
+    }
+
+    #endregion
+
+    #region OSD System
+
+    private void ShowOsd(string? status)
+    {
+        if (status != null)
+              OsdLine1.Text = status;
+
+        Osd.Visibility = Visibility.Visible;
+        _osdHideTimer?.Stop();
+        _osdHideTimer?.Start();
     }
 
     #endregion
@@ -362,3 +533,4 @@ public partial class PlayerWindow : Window
 
     #endregion
 }
+
