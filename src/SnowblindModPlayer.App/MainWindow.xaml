@@ -11,15 +11,17 @@
 
         <!-- Sidebar -->
         <StackPanel Grid.Column="0" Background="#ECECEC">
-            <Button Content="Videos" Height="50" Background="Transparent" BorderThickness="0"/>
-            <Button Content="Logs" Height="50" Background="Transparent" BorderThickness="0"/>
-            <Button Content="Settings" Height="50" Background="Transparent" BorderThickness="0"/>
+            <Button Content="Videos" Height="50" Background="Transparent" BorderThickness="0"
+                    Command="{Binding NavigateVideosCommand}"/>
+            <Button Content="Logs" Height="50" Background="Transparent" BorderThickness="0"
+                    Command="{Binding NavigateLogsCommand}"/>
+            <Button Content="Settings" Height="50" Background="Transparent" BorderThickness="0"
+                    Command="{Binding NavigateSettingsCommand}"/>
         </StackPanel>
 
         <!-- Content Area -->
-        <Border Grid.Column="1" Padding="20">
-            <TextBlock Text="Welcome to Snowblind-Mod Player" 
-                       FontSize="18" Foreground="#333333"/>
+        <Border Grid.Column="1" Padding="0">
+            <ContentControl Content="{Binding CurrentView}" />
         </Border>
     </Grid>
 </Window>

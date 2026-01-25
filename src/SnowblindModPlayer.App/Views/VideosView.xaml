@@ -1,0 +1,8 @@
+<UserControl x:Class="SnowblindModPlayer.Views.VideosView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Background="White">
+    <Border Padding="20">
+        <TextBlock Text="Videos" FontSize="24" FontWeight="Bold" />
+    </Border>
+</UserControl>
