@@ -1,4 +1,6 @@
 using System.Collections.ObjectModel;
+using System.ComponentModel;
+using System.Windows.Data;
 using System.Windows;
 using Microsoft.Win32;
 using SnowblindModPlayer.Core.Services;
@@ -12,11 +14,39 @@ public class VideosViewModel : ViewModelBase
     private readonly IImportService _importService;
     private ObservableCollection<MediaItem> _videos = new();
     private MediaItem? _selectedMedia;
+    private readonly ICollectionView _filteredVideos;
+    private string _searchText = string.Empty;
+    private string _viewMode;
+    private ObservableCollection<string> _viewModes = new() { "Tile", "List" };
 
     public ObservableCollection<MediaItem> Videos
     {
         get => _videos;
         set => SetProperty(ref _videos, value);
+    }
+
+    public ICollectionView FilteredVideos => _filteredVideos;
+
+    public string SearchText
+    {
+        get => _searchText;
+        set
+        {
+            SetProperty(ref _searchText, value);
+            _filteredVideos.Refresh();
+        }
+    }
+
+    public ObservableCollection<string> ViewModes
+    {
+        get => _viewModes;
+        set => SetProperty(ref _viewModes, value);
+    }
+
+    public string ViewMode
+    {
+        get => _viewMode;
+        set => SetProperty(ref _viewMode, value);
     }
 
     public MediaItem? SelectedMedia
@@ -34,6 +64,10 @@ public class VideosViewModel : ViewModelBase
         _libraryService = libraryService;
         _importService = importService;
 
+        _filteredVideos = CollectionViewSource.GetDefaultView(_videos);
+        _filteredVideos.Filter = FilterVideo;
+        _viewMode = _viewModes[0];
+
         ImportCommand = new RelayCommand(_ => ImportVideosAsync());
         RemoveCommand = new RelayCommand(_ => RemoveSelectedAsync());
         SetDefaultCommand = new RelayCommand(_ => SetAsDefaultAsync());
@@ -41,12 +75,29 @@ public class VideosViewModel : ViewModelBase
         _ = LoadVideosAsync();
     }
 
+    private bool FilterVideo(object obj)
+    {
+        if (obj is not MediaItem item)
+            return false;
+
+        if (string.IsNullOrWhiteSpace(SearchText))
+            return true;
+
+        return item.DisplayName?.Contains(SearchText, StringComparison.OrdinalIgnoreCase) == true;
+    }
+
     private async Task LoadVideosAsync()
     {
         try
         {
             var mediaItems = await _libraryService.GetAllMediaAsync();
-            Videos = new ObservableCollection<MediaItem>(mediaItems);
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                _videos.Clear();
+                foreach (var item in mediaItems)
+                    _videos.Add(item);
+                _filteredVideos.Refresh();
+            });
         }
         catch (Exception ex)
         {

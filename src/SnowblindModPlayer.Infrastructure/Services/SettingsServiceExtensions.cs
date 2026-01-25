@@ -11,6 +11,7 @@ public static class SettingsServiceExtensions
     private const string MutedKey = "Muted";
     private const string LoopEnabledKey = "LoopEnabled";
     private const string FillScreenKey = "FillScreen";
+    private const string ThemePreferenceKey = "ThemePreference";
 
     public static string GetMediaFolder(this ISettingsService settings)
     {
@@ -80,6 +81,16 @@ public static class SettingsServiceExtensions
     public static void SetFillScreen(this ISettingsService settings, bool fill)
     {
         settings.Set(FillScreenKey, fill);
+    }
+
+    public static string GetThemePreference(this ISettingsService settings)
+    {
+        return settings.Get(ThemePreferenceKey, "System");
+    }
+
+    public static void SetThemePreference(this ISettingsService settings, string preference)
+    {
+        settings.Set(ThemePreferenceKey, preference);
     }
 
     private static string GetDefaultMediaFolder()

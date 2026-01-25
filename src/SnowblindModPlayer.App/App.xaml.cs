@@ -2,6 +2,8 @@ using System.Windows;
 using Microsoft.Extensions.DependencyInjection;
 using SnowblindModPlayer.Core.Services;
 using SnowblindModPlayer.Infrastructure;
+using SnowblindModPlayer.Infrastructure.Services;
+using SnowblindModPlayer.Services;
 using SnowblindModPlayer.UI.ViewModels;
 using SnowblindModPlayer.ViewModels;
 using SnowblindModPlayer.Views;
@@ -35,50 +37,46 @@ public partial class App : Application
 
             // Initialize database and run migrations
             System.Diagnostics.Debug.WriteLine("Initializing database...");
-            try
-            {
-                _serviceProvider.InitializeDatabaseAsync().Wait();
-                System.Diagnostics.Debug.WriteLine("? Database initialized");
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"? Database initialization failed: {ex.Message}");
-                System.Diagnostics.Debug.WriteLine($"Stack trace: {ex.StackTrace}");
-                throw;
-            }
+            _serviceProvider.InitializeDatabaseAsync().GetAwaiter().GetResult();
+            System.Diagnostics.Debug.WriteLine("? Database initialized");
 
-            // Create main window WITHOUT loading settings first
+            var settingsService = _serviceProvider.GetRequiredService<ISettingsService>();
+
+            // Create main window
             System.Diagnostics.Debug.WriteLine("Creating main window...");
-            try
+            MainWindow = _serviceProvider.GetRequiredService<MainWindow>();
+            var viewModel = _serviceProvider.GetRequiredService<SnowblindModPlayer.ViewModels.MainWindowViewModel>();
+            MainWindow.DataContext = viewModel;
+            MainWindow.Show();
+            System.Diagnostics.Debug.WriteLine("? Main window shown");
+
+            // Load settings + apply theme without blocking UI thread
+            _ = Task.Run(async () =>
             {
-                MainWindow = _serviceProvider.GetRequiredService<MainWindow>();
-                System.Diagnostics.Debug.WriteLine("? MainWindow obtained");
+                try
+                {
+                    System.Diagnostics.Debug.WriteLine("Loading settings...");
+                    var loadTask = settingsService.LoadAsync();
+                    var completed = await Task.WhenAny(loadTask, Task.Delay(TimeSpan.FromSeconds(3)));
+                    if (completed != loadTask)
+                    {
+                        System.Diagnostics.Debug.WriteLine("? Settings load timed out after 3s; continuing with defaults");
+                        return;
+                    }
 
-                var viewModel = _serviceProvider.GetRequiredService<SnowblindModPlayer.ViewModels.MainWindowViewModel>();
-                System.Diagnostics.Debug.WriteLine("? MainWindowViewModel obtained");
-
-                MainWindow.DataContext = viewModel;
-                System.Diagnostics.Debug.WriteLine("? DataContext set");
-
-                MainWindow.Show();
-                System.Diagnostics.Debug.WriteLine("? Main window shown");
-
-                // Load settings AFTER window is shown
-                System.Diagnostics.Debug.WriteLine("Loading settings (async)...");
-                var settingsService = _serviceProvider.GetRequiredService<ISettingsService>();
-                // Don't wait - load asynchronously after window is shown
-                #pragma warning disable CS4014
-                settingsService.LoadAsync();
-                #pragma warning restore CS4014
-                System.Diagnostics.Debug.WriteLine("? Settings load initiated");
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"? Window creation failed: {ex}");
-                System.Diagnostics.Debug.WriteLine($"InnerException: {ex.InnerException}");
-                System.Diagnostics.Debug.WriteLine($"Stack trace: {ex.StackTrace}");
-                throw;
-            }
+                    System.Diagnostics.Debug.WriteLine("? Settings loaded");
+                    Dispatcher.Invoke(() =>
+                    {
+                        System.Diagnostics.Debug.WriteLine("Applying theme...");
+                        ThemeService.ApplyTheme(this, ThemeService.ResolveIsLightTheme(settingsService));
+                        System.Diagnostics.Debug.WriteLine("? Theme applied");
+                    });
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"? Settings load failed: {ex}");
+                }
+            });
         }
         catch (Exception ex)
         {

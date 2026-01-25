@@ -1,52 +1,117 @@
 <UserControl x:Class="SnowblindModPlayer.Views.VideosView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             Background="White">
-    <Border Padding="20">
-        <Grid>
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="*" />
-            </Grid.RowDefinitions>
+             xmlns:converters="clr-namespace:SnowblindModPlayer.Converters"
+             Background="Transparent">
+    <UserControl.Resources>
+        <converters:ThumbnailPathToImageSourceConverter x:Key="ThumbnailConverter" />
+        <DataTemplate x:Key="TileTemplate">
+            <Border x:Name="TileRoot" Background="{DynamicResource Brush.Panel}" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1"
+                    CornerRadius="10" Padding="12" Margin="0,0,12,12" Width="200">
+                <StackPanel>
+                    <Border Height="96" Background="{DynamicResource Brush.Panel2}" CornerRadius="8" ClipToBounds="True">
+                        <Image Stretch="UniformToFill" Source="{Binding ThumbnailPath, Converter={StaticResource ThumbnailConverter}}" />
+                    </Border>
+                    <TextBlock Text="{Binding DisplayName}" FontSize="16" FontWeight="SemiBold" Margin="0,10,0,0" TextAlignment="Center" />
+                </StackPanel>
+            </Border>
+            <DataTemplate.Triggers>
+                <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=ListBoxItem}, Path=IsSelected}" Value="True">
+                    <Setter TargetName="TileRoot" Property="BorderBrush" Value="{DynamicResource Brush.Accent}" />
+                    <Setter TargetName="TileRoot" Property="BorderThickness" Value="2" />
+                </DataTrigger>
+            </DataTemplate.Triggers>
+        </DataTemplate>
 
-            <!-- Toolbar -->
-            <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,15">
-                <Button Content="? Add Video" Padding="10,5" Background="#0078D4" Foreground="White" Margin="0,0,10,0"
-                        Command="{Binding ImportCommand}" />
-                <Button Content="??? Remove" Padding="10,5" Background="#D32F2F" Foreground="White" Margin="0,0,10,0"
-                        Command="{Binding RemoveCommand}" />
-                <Button Content="? Set as Default" Padding="10,5" Background="#FFA500" Foreground="White"
-                        Command="{Binding SetDefaultCommand}" />
-            </StackPanel>
+        <DataTemplate x:Key="ListTemplate">
+            <Border x:Name="RowRoot" Background="{DynamicResource Brush.Panel}" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1"
+                    CornerRadius="8" Padding="12" Margin="0,0,0,10">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="100" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <Border Grid.Column="0" Width="96" Height="54" Background="{DynamicResource Brush.Panel2}" CornerRadius="6" Margin="0,0,12,0" ClipToBounds="True">
+                        <Image Stretch="UniformToFill" Source="{Binding ThumbnailPath, Converter={StaticResource ThumbnailConverter}}" />
+                    </Border>
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding DisplayName}" FontSize="16" FontWeight="SemiBold" />
+                        <TextBlock Text="{Binding DateAdded, StringFormat='Added: {0:yyyy-MM-dd HH:mm:ss}'}" FontSize="12" Foreground="{DynamicResource Brush.TextMuted}" Margin="0,3,0,0" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+            <DataTemplate.Triggers>
+                <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=ListBoxItem}, Path=IsSelected}" Value="True">
+                    <Setter TargetName="RowRoot" Property="BorderBrush" Value="{DynamicResource Brush.Accent}" />
+                    <Setter TargetName="RowRoot" Property="BorderThickness" Value="2" />
+                    <Setter TargetName="RowRoot" Property="Background" Value="{DynamicResource Brush.Panel2}" />
+                </DataTrigger>
+            </DataTemplate.Triggers>
+        </DataTemplate>
+    </UserControl.Resources>
 
-            <!-- Videos List -->
-            <ListBox Grid.Row="1" ItemsSource="{Binding Videos}" SelectedItem="{Binding SelectedMedia}" Background="#F5F5F5">
-                <ListBox.ItemTemplate>
-                    <DataTemplate>
-                        <Border Padding="10" BorderBrush="#DDD" BorderThickness="0,0,0,1">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="80" />
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
 
-                                <!-- Thumbnail placeholder -->
-                                <Rectangle Grid.Column="0" Width="80" Height="45" Fill="#CCC" Margin="0,0,10,0" />
+        <Border Grid.Row="0" Background="Transparent" Padding="16,12,16,8">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
 
-                                <!-- Video info -->
-                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="{Binding DisplayName}" FontWeight="Bold" FontSize="13" />
-                                    <TextBlock Text="{Binding DateAdded, StringFormat='Added: {0:yyyy-MM-dd HH:mm:ss}'}" FontSize="11" Foreground="#666" Margin="0,3,0,0" />
-                                </StackPanel>
+                <TextBox Grid.Column="0" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" Height="36" VerticalContentAlignment="Center" />
+                <ComboBox Grid.Column="1" Width="140" Height="34" Margin="10,0,0,0" SelectedItem="{Binding ViewMode}" ItemsSource="{Binding ViewModes}" />
+            </Grid>
+        </Border>
 
-                                <!-- Empty space -->
-                                <TextBlock Grid.Column="2" VerticalAlignment="Center" Margin="10,0,0,0" />
-                            </Grid>
-                        </Border>
-                    </DataTemplate>
-                </ListBox.ItemTemplate>
-            </ListBox>
-        </Grid>
-    </Border>
+        <Border Grid.Row="1" Background="Transparent" Padding="16">
+            <ContentControl>
+                <ContentControl.Style>
+                    <Style TargetType="ContentControl">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding ViewMode}" Value="Tile">
+                                <Setter Property="Content">
+                                    <Setter.Value>
+                                        <ListBox ItemsSource="{Binding FilteredVideos}" SelectedItem="{Binding SelectedMedia}" BorderThickness="0" Background="Transparent"
+                                                ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                                ScrollViewer.CanContentScroll="False" HorizontalContentAlignment="Stretch">
+                                            <ListBox.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <WrapPanel IsItemsHost="True" />
+                                                </ItemsPanelTemplate>
+                                            </ListBox.ItemsPanel>
+                                            <ListBox.ItemTemplate>
+                                                <StaticResource ResourceKey="TileTemplate" />
+                                            </ListBox.ItemTemplate>
+                                        </ListBox>
+                                    </Setter.Value>
+                                </Setter>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding ViewMode}" Value="List">
+                                <Setter Property="Content">
+                                    <Setter.Value>
+                                        <ListBox ItemsSource="{Binding FilteredVideos}" SelectedItem="{Binding SelectedMedia}">
+                                            <ListBox.ItemTemplate>
+                                                <StaticResource ResourceKey="ListTemplate" />
+                                            </ListBox.ItemTemplate>
+                                        </ListBox>
+                                    </Setter.Value>
+                                </Setter>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </ContentControl.Style>
+            </ContentControl>
+        </Border>
+
+        <Border Grid.Row="2" Background="{DynamicResource Brush.Bg1}" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,1,0,0">
+            <TextBlock Text="Double click to play a video" Foreground="{DynamicResource Brush.TextMuted}" HorizontalAlignment="Center" Margin="0,10" />
+        </Border>
+    </Grid>
 </UserControl>

@@ -6,6 +6,7 @@ namespace SnowblindModPlayer.Infrastructure.Services;
 public class SettingsService : ISettingsService
 {
     private readonly Dictionary<string, object> _settings = new();
+    private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
     private readonly IAppDataPathService _appDataPathService;
     private readonly string _settingsFilePath;
     private readonly Dictionary<string, List<Delegate>> _liveUpdateCallbacks = new();
@@ -16,6 +17,7 @@ public class SettingsService : ISettingsService
         { "MediaFolder", GetDefaultMediaFolder() },
         { "SelectedMonitorId", string.Empty },
         { "DefaultVideoId", string.Empty },
+        { "ThemePreference", "System" },
         { "LoopEnabled", true },
         { "FillScreen", true },
         { "KeepAspectRatio", false },
@@ -90,7 +92,17 @@ public class SettingsService : ISettingsService
     {
         try
         {
-            var json = JsonSerializer.Serialize(_settings, new JsonSerializerOptions { WriteIndented = true });
+            var stable = new Dictionary<string, JsonElement>();
+            foreach (var kvp in _settings)
+            {
+                stable[kvp.Key] = kvp.Value switch
+                {
+                    JsonElement je => je,
+                    _ => JsonSerializer.SerializeToElement(kvp.Value, JsonOptions)
+                };
+            }
+
+            var json = JsonSerializer.Serialize(stable, JsonOptions);
             await File.WriteAllTextAsync(_settingsFilePath, json);
         }
         catch (Exception ex)
@@ -116,15 +128,16 @@ public class SettingsService : ISettingsService
             if (File.Exists(_settingsFilePath))
             {
                 var json = await File.ReadAllTextAsync(_settingsFilePath);
-                var loaded = JsonSerializer.Deserialize<Dictionary<string, object>>(json);
-                if (loaded != null)
+                using var doc = JsonDocument.Parse(json);
+                if (doc.RootElement.ValueKind == JsonValueKind.Object)
                 {
-                    foreach (var kvp in loaded)
-                    {
-                        _settings[kvp.Key] = kvp.Value;
-                    }
+                    foreach (var prop in doc.RootElement.EnumerateObject())
+                        _settings[prop.Name] = prop.Value.Clone();
                 }
             }
+
+            if (_settings.TryGetValue("ThemePreference", out var themePref))
+                System.Diagnostics.Debug.WriteLine($"Loaded ThemePreference={themePref}");
         }
         catch (Exception ex)
         {

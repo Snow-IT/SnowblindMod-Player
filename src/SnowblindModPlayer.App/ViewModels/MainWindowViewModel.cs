@@ -1,4 +1,5 @@
 using SnowblindModPlayer.Core.Services;
+using SnowblindModPlayer.Services;
 using SnowblindModPlayer.UI.MVVM;
 using SnowblindModPlayer.Views;
 
@@ -15,6 +16,28 @@ public class MainWindowViewModel : ViewModelBase
     public RelayCommand NavigateVideosCommand { get; }
     public RelayCommand NavigateLogsCommand { get; }
     public RelayCommand NavigateSettingsCommand { get; }
+    public RelayCommand ToggleSidebarCommand { get; }
+
+    private bool _sidebarCollapsed;
+    public bool SidebarCollapsed
+    {
+        get => _sidebarCollapsed;
+        set => SetProperty(ref _sidebarCollapsed, value);
+    }
+
+    private object? _commandBarContent;
+    public object? CommandBarContent
+    {
+        get => _commandBarContent;
+        set => SetProperty(ref _commandBarContent, value);
+    }
+
+    private string _pageTitle = "Videos";
+    public string PageTitle
+    {
+        get => _pageTitle;
+        set => SetProperty(ref _pageTitle, value);
+    }
 
     private object? _currentView;
     public object? CurrentView
@@ -50,6 +73,7 @@ public class MainWindowViewModel : ViewModelBase
         NavigateVideosCommand = new RelayCommand(_ => SelectedPage = "Videos");
         NavigateLogsCommand = new RelayCommand(_ => SelectedPage = "Logs");
         NavigateSettingsCommand = new RelayCommand(_ => SelectedPage = "Settings");
+        ToggleSidebarCommand = new RelayCommand(_ => SidebarCollapsed = !SidebarCollapsed);
 
         UpdateCurrentView();
     }
@@ -62,5 +86,8 @@ public class MainWindowViewModel : ViewModelBase
             "Settings" => _settingsView,
             _ => _videosView,
         };
+
+        PageTitle = SelectedPage;
+        CommandBarContent = CommandBarFactory.CreateForPage(SelectedPage, CurrentView);
     }
 }

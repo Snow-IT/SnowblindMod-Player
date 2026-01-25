@@ -1,27 +1,206 @@
 <Window x:Class="SnowblindModPlayer.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:sys="clr-namespace:System;assembly=mscorlib"
+        xmlns:converters="clr-namespace:SnowblindModPlayer.Converters"
+        xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
         Title="Snowblind-Mod Player" Height="600" Width="900"
-        Background="#F3F3F3">
+        Background="{DynamicResource Brush.Bg0}"
+        WindowStyle="None"
+        ResizeMode="CanResize"
+        AllowsTransparency="False">
+    <shell:WindowChrome.WindowChrome>
+        <shell:WindowChrome CaptionHeight="38" ResizeBorderThickness="6" CornerRadius="10" GlassFrameThickness="0" UseAeroCaptionButtons="True" />
+    </shell:WindowChrome.WindowChrome>
+    <Window.Resources>
+        <!-- Segoe Fluent Icons Glyphs -->
+        <sys:String x:Key="IconVideo">&#xE714;</sys:String>
+        <sys:String x:Key="IconLog">&#xE7C3;</sys:String>
+        <sys:String x:Key="IconSettings">&#xE713;</sys:String>
+        <sys:String x:Key="IconMenu">&#xE700;</sys:String>
+
+        <!-- Page converters for selected state -->
+        <converters:PageToTagConverter x:Key="VideosPageConverter" PageName="Videos" />
+        <converters:PageToTagConverter x:Key="LogsPageConverter" PageName="Logs" />
+        <converters:PageToTagConverter x:Key="SettingsPageConverter" PageName="Settings" />
+
+        <!-- Sidebar Nav Button with Selected State -->
+        <Style x:Key="SidebarNavButtonWithIndicator" TargetType="Button" BasedOn="{StaticResource SidebarNavButton}">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="4" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+
+                            <!-- Left indicator (Win11 style) -->
+                            <Border x:Name="Indicator" Grid.Column="0" Background="{DynamicResource Brush.Accent}" 
+                                    CornerRadius="0,2,2,0" Visibility="Collapsed" />
+
+                            <!-- Button background + content -->
+                            <Border x:Name="ButtonBorder" Grid.Column="1" 
+                                    Background="{TemplateBinding Background}"
+                                    CornerRadius="6" Padding="{TemplateBinding Padding}">
+                                <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" 
+                                                  VerticalAlignment="Center" />
+                            </Border>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="Tag" Value="Selected">
+                                <Setter TargetName="Indicator" Property="Visibility" Value="Visible" />
+                                <Setter TargetName="ButtonBorder" Property="Background" Value="{DynamicResource Brush.Panel}" />
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="ButtonBorder" Property="Background" Value="{DynamicResource Brush.Panel}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
     <Grid>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="200"/>
-            <ColumnDefinition Width="*"/>
+            <ColumnDefinition>
+                <ColumnDefinition.Style>
+                    <Style TargetType="ColumnDefinition">
+                        <Setter Property="Width" Value="220" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding SidebarCollapsed}" Value="True">
+                                <Setter Property="Width" Value="76" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </ColumnDefinition.Style>
+            </ColumnDefinition>
+            <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
 
-        <!-- Sidebar -->
-        <StackPanel Grid.Column="0" Background="#ECECEC">
-            <Button Content="Videos" Height="50" Background="Transparent" BorderThickness="0"
-                    Command="{Binding NavigateVideosCommand}"/>
-            <Button Content="Logs" Height="50" Background="Transparent" BorderThickness="0"
-                    Command="{Binding NavigateLogsCommand}"/>
-            <Button Content="Settings" Height="50" Background="Transparent" BorderThickness="0"
-                    Command="{Binding NavigateSettingsCommand}"/>
-        </StackPanel>
+        <!-- Custom title bar (drag region) -->
+        <Border Grid.ColumnSpan="2" Height="38" Background="{DynamicResource Brush.Bg1}" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,0,0,1"
+                VerticalAlignment="Top" Panel.ZIndex="10" MouseLeftButtonDown="TitleBar_OnMouseLeftButtonDown">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
 
-        <!-- Content Area -->
-        <Border Grid.Column="1" Padding="0">
-            <ContentControl Content="{Binding CurrentView}" />
+                <DockPanel Grid.Column="0" LastChildFill="True">
+                    <TextBlock Text="Snowblind-Mod Player" Margin="12,0,0,0" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="{DynamicResource Brush.Text}" />
+                </DockPanel>
+
+                <!-- Caption buttons -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Stretch">
+                    <Button x:Name="MinimizeButton" Style="{StaticResource CaptionButton}" Content="&#xE921;" ToolTip="Minimize" Click="MinimizeButton_Click" shell:WindowChrome.IsHitTestVisibleInChrome="True" />
+                    <Button x:Name="MaxRestoreButton" Style="{StaticResource CaptionButton}" Content="&#xE922;" ToolTip="Maximize" Click="MaxRestoreButton_Click" shell:WindowChrome.IsHitTestVisibleInChrome="True" />
+                    <Button x:Name="CloseButton" Style="{StaticResource CaptionCloseButton}" Content="&#xE8BB;" ToolTip="Close" Click="CloseButton_Click" shell:WindowChrome.IsHitTestVisibleInChrome="True" />
+                </StackPanel>
+            </Grid>
         </Border>
+
+        <!-- Sidebar -->
+        <Border Grid.Column="0" Background="{DynamicResource Brush.Bg1}" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,0,1,0">
+            <DockPanel Margin="8,10,8,10">
+
+                <Button DockPanel.Dock="Top" Style="{StaticResource IconButton}" 
+                        Content="{StaticResource IconMenu}" 
+                        Command="{Binding ToggleSidebarCommand}"
+                        ToolTip="Toggle sidebar"
+                        HorizontalAlignment="Left"
+                        Margin="4,28,0,10" />
+
+                <!-- Settings at bottom -->
+                <Button DockPanel.Dock="Bottom" Command="{Binding NavigateSettingsCommand}" 
+                        Style="{StaticResource SidebarNavButtonWithIndicator}"
+                        Tag="{Binding SelectedPage, Converter={StaticResource SettingsPageConverter}}">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="{StaticResource IconSettings}" FontFamily="{StaticResource FluentIcons}" 
+                                   FontSize="16" VerticalAlignment="Center" Margin="0,0,10,0" />
+                        <TextBlock Text="Settings" VerticalAlignment="Center">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding SidebarCollapsed}" Value="True">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </StackPanel>
+                </Button>
+
+                <StackPanel>
+                    <!-- Videos -->
+                    <Button Command="{Binding NavigateVideosCommand}" 
+                            Style="{StaticResource SidebarNavButtonWithIndicator}"
+                            Tag="{Binding SelectedPage, Converter={StaticResource VideosPageConverter}}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="{StaticResource IconVideo}" FontFamily="{StaticResource FluentIcons}" 
+                                       FontSize="16" Width="26" Margin="0,0,10,0" VerticalAlignment="Center" TextAlignment="Center" LineHeight="18" />
+                            <TextBlock Text="Videos" VerticalAlignment="Center">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding SidebarCollapsed}" Value="True">
+                                                <Setter Property="Visibility" Value="Collapsed" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </StackPanel>
+                    </Button>
+
+                    <!-- Logs -->
+                    <Button Command="{Binding NavigateLogsCommand}" 
+                            Style="{StaticResource SidebarNavButtonWithIndicator}"
+                            Tag="{Binding SelectedPage, Converter={StaticResource LogsPageConverter}}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="{StaticResource IconLog}" FontFamily="{StaticResource FluentIcons}" 
+                                       FontSize="16" Width="26" Margin="0,0,10,0" VerticalAlignment="Center" TextAlignment="Center" LineHeight="18" />
+                            <TextBlock Text="Logs" VerticalAlignment="Center">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding SidebarCollapsed}" Value="True">
+                                                <Setter Property="Visibility" Value="Collapsed" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <!-- Main Area -->
+        <Grid Grid.Column="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="38" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <!-- Top command bar (dynamic per page) -->
+            <Border Grid.Row="1" Background="{DynamicResource Brush.Bg1}" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,0,0,1">
+                <Grid Margin="16,10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="{Binding PageTitle}" FontSize="18" FontWeight="SemiBold" VerticalAlignment="Center" />
+                    <ContentControl Grid.Column="1" Content="{Binding CommandBarContent}" VerticalAlignment="Center" />
+                </Grid>
+            </Border>
+
+            <!-- Page content -->
+            <ContentControl Grid.Row="2" Content="{Binding CurrentView}" />
+        </Grid>
     </Grid>
 </Window>

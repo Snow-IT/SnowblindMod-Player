@@ -1,0 +1,24 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <Color x:Key="App.Bg0">#0E171C</Color>
+    <Color x:Key="App.Bg1">#141F25</Color>
+    <Color x:Key="App.Panel">#1A262D</Color>
+    <Color x:Key="App.Panel2">#1F2D35</Color>
+    <Color x:Key="App.Border">#2C3A43</Color>
+    <Color x:Key="App.Text">#E8EEF2</Color>
+    <Color x:Key="App.TextMuted">#AAB8C2</Color>
+    <Color x:Key="App.Accent">#7FD3E8</Color>
+    <Color x:Key="App.Danger">#D45D5D</Color>
+
+    <SolidColorBrush x:Key="Brush.Bg0" Color="{StaticResource App.Bg0}" />
+    <SolidColorBrush x:Key="Brush.Bg1" Color="{StaticResource App.Bg1}" />
+    <SolidColorBrush x:Key="Brush.Panel" Color="{StaticResource App.Panel}" />
+    <SolidColorBrush x:Key="Brush.Panel2" Color="{StaticResource App.Panel2}" />
+    <SolidColorBrush x:Key="Brush.Border" Color="{StaticResource App.Border}" />
+    <SolidColorBrush x:Key="Brush.Text" Color="{StaticResource App.Text}" />
+    <SolidColorBrush x:Key="Brush.TextMuted" Color="{StaticResource App.TextMuted}" />
+    <SolidColorBrush x:Key="Brush.Accent" Color="{StaticResource App.Accent}" />
+    <SolidColorBrush x:Key="Brush.Danger" Color="{StaticResource App.Danger}" />
+
+</ResourceDictionary>

@@ -1,10 +1,10 @@
 # Snowblind-Mod Player — Repo Instructions (MUST FOLLOW)
 
-You are implementing the Windows desktop app "Snowblind-Mod Player".
+You are implementing the Windows desktop app "Snowblind-Mod Player".  
 Follow docs/SPEC_FINAL.md strictly.
 
 ## Fixed Tech Decisions (do not change)
-- UI: WPF (.NET 8+), MVVM + Services
+- UI: WPF (.NET 8+), MVVM + Services; implement an app-wide design system with global WPF styles/templates consistent across Light/Dark themes, where only colors change, not layout/controls.
 - Playback: LibVLC via VLCSharp, separate PlayerWindow
 - Thumbnails: VLC snapshot at 5% duration; fallback 1s/0s; async queue max 1 parallel; timeout+retry; on failure placeholder+warn; import still succeeds
 - Storage: Hybrid (Settings JSON, Library SQLite via Microsoft.Data.Sqlite); originalSourcePath UNIQUE
