@@ -1,21 +1,16 @@
 # Snowblind‑Mod Player
 
-Windows Desktop App zur Verwaltung und Wiedergabe einer lokalen Videobibliothek (Snowblind‑Mod Player).
+Repo Bootstrap für die Implementierung mit GitHub Copilot (Visual Studio) und GitHub Actions.
 
-## Status
-- Repository ist gebootstrapped (Docs, Copilot‑Instructions, CI).
-- Implementierung erfolgt milestone‑basiert (siehe `docs/IMPLEMENTATION_PLAN.md`).
+## Start
+1) Füge die finale Spezifikation in `docs/SPEC_FINAL.md` ein.
+2) Aktiviere in Visual Studio: Custom instructions aus `.github/copilot-instructions.md` laden.
+3) Nutze Prompt Files:
+   - `snowblind-implement` (Milestones implementieren)
+   - `snowblind-create-issues` (GitHub Issues/Backlog erzeugen)
 
-## Quickstart (lokal)
-1. Installiere Visual Studio 2022 + .NET 8 SDK.
-2. Öffne die Solution (wird in Milestone 0 erstellt).
-3. Build/Run aus Visual Studio.
+## Projekt-Tracking
+- Output/Backlog: `docs/ISSUES_BACKLOG.md`
 
 ## Releases
-- Tagge mit `vX.Y.Z` → GitHub Actions baut ein **Portable ZIP** Release.
-
-## Dokumente
-- `docs/SPEC_FINAL.md` — funktionale Spezifikation (Quelle der Wahrheit)
-- `docs/ARCHITECTURE.md` — Tech-Entscheidungen
-- `docs/IMPLEMENTATION_PLAN.md` — Milestones
-- `docs/TEST_CHECKLIST.md` — Tests
+- Tag `vX.Y.Z` → GitHub Actions erzeugt ein Portable ZIP Release.
