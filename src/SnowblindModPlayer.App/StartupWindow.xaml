@@ -1,0 +1,27 @@
+<Window x:Class="SnowblindModPlayer.StartupWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        WindowStyle="None"
+        ResizeMode="NoResize"
+        AllowsTransparency="True"
+        Background="Transparent"
+        Width="420"
+        Height="160"
+        ShowInTaskbar="False"
+        Topmost="True">
+    <Border Background="{DynamicResource Brush.Panel}" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1" CornerRadius="12" Padding="18">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <TextBlock Text="Snowblind-Mod Player" FontSize="16" FontWeight="SemiBold" />
+
+            <StackPanel Grid.Row="1" Orientation="Vertical" Margin="0,14,0,0">
+                <TextBlock Text="Starting..." Foreground="{DynamicResource Brush.TextMuted}"/>
+                <ProgressBar Height="10" Margin="0,10,0,0" IsIndeterminate="True"/>
+            </StackPanel>
+        </Grid>
+    </Border>
+</Window>

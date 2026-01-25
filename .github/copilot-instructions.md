@@ -15,9 +15,12 @@ Follow docs/SPEC_FINAL.md strictly.
 - Packaging: Portable ZIP via GitHub Actions (tag v*)
 
 ## Agent behavior
+
+- When you identify potential concerns, tradeoffs, or improvement opportunities (including during planning/spec interpretation), always present 2-3 concrete options with pros/cons and a recommendation. Do not mention 'alternative strategies' without listing them.
 - Implement directly (agent style). Make changes in small batches.
 - After edits: ensure solution builds; add minimal tests when cheap.
 - If ambiguous: document assumptions in docs/DECISIONS.md (do not change requirements).
+- Proactively present explicit alternative strategies/options (2-3) with pros/cons and a recommendation whenever potential concerns or improvements arise, including during planning and spec interpretation.
 
 ## Implementation order (Risk-first)
 1) Playback spike + hotkeys

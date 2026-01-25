@@ -4,6 +4,7 @@ using System.Windows.Data;
 using System.Windows;
 using Microsoft.Win32;
 using SnowblindModPlayer.Core.Services;
+using SnowblindModPlayer.Infrastructure.Services;
 using SnowblindModPlayer.UI.MVVM;
 
 namespace SnowblindModPlayer.ViewModels;
@@ -12,6 +13,7 @@ public class VideosViewModel : ViewModelBase
 {
     private readonly ILibraryService _libraryService;
     private readonly IImportService _importService;
+    private readonly ISettingsService _settingsService;
     private ObservableCollection<MediaItem> _videos = new();
     private MediaItem? _selectedMedia;
     private readonly ICollectionView _filteredVideos;
@@ -46,7 +48,15 @@ public class VideosViewModel : ViewModelBase
     public string ViewMode
     {
         get => _viewMode;
-        set => SetProperty(ref _viewMode, value);
+        set
+        {
+            if (string.Equals(_viewMode, value, StringComparison.Ordinal))
+                return;
+
+            SetProperty(ref _viewMode, value);
+            _settingsService.SetVideosViewMode(_viewMode);
+            _ = _settingsService.SaveAsync();
+        }
     }
 
     public MediaItem? SelectedMedia
@@ -55,22 +65,47 @@ public class VideosViewModel : ViewModelBase
         set => SetProperty(ref _selectedMedia, value);
     }
 
+    private string _defaultVideoId = string.Empty;
+    public string DefaultVideoId
+    {
+        get => _defaultVideoId;
+        private set => SetProperty(ref _defaultVideoId, value);
+    }
+
     public RelayCommand ImportCommand { get; }
     public RelayCommand RemoveCommand { get; }
     public RelayCommand SetDefaultCommand { get; }
 
-    public VideosViewModel(ILibraryService libraryService, IImportService importService)
+    public VideosViewModel(ILibraryService libraryService, IImportService importService, ISettingsService settingsService)
     {
         _libraryService = libraryService;
         _importService = importService;
+        _settingsService = settingsService;
 
         _filteredVideos = CollectionViewSource.GetDefaultView(_videos);
         _filteredVideos.Filter = FilterVideo;
-        _viewMode = _viewModes[0];
+        var persisted = _settingsService.GetVideosViewMode();
+        _viewMode = _viewModes.Contains(persisted) ? persisted : _viewModes[0];
 
         ImportCommand = new RelayCommand(_ => ImportVideosAsync());
         RemoveCommand = new RelayCommand(_ => RemoveSelectedAsync());
         SetDefaultCommand = new RelayCommand(_ => SetAsDefaultAsync());
+
+        DefaultVideoId = _settingsService.GetDefaultVideoId();
+
+        _settingsService.RegisterLiveUpdate<string>("VideosViewMode", mode =>
+        {
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                if (_viewModes.Contains(mode) && !string.Equals(_viewMode, mode, StringComparison.Ordinal))
+                    SetProperty(ref _viewMode, mode);
+            });
+        });
+
+        _settingsService.RegisterLiveUpdate<string>("DefaultVideoId", id =>
+        {
+            Application.Current.Dispatcher.Invoke(() => DefaultVideoId = id);
+        });
 
         _ = LoadVideosAsync();
     }
@@ -206,6 +241,8 @@ public class VideosViewModel : ViewModelBase
             var selectedName = SelectedMedia.DisplayName; // Capture name before reload
             
             await _libraryService.SetDefaultVideoAsync(selectedId);
+            DefaultVideoId = selectedId;
+            _ = _settingsService.SaveAsync();
             await LoadVideosAsync();
             
             MessageBox.Show(

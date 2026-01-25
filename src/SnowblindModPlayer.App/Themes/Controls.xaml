@@ -3,6 +3,8 @@
 
     <!-- Segoe Fluent Icons Font -->
     <FontFamily x:Key="FluentIcons">Segoe Fluent Icons</FontFamily>
+    <!-- Fallback icon font available on more Windows installations -->
+    <FontFamily x:Key="Mdl2Icons">Segoe MDL2 Assets</FontFamily>
 
     <Style TargetType="Window">
         <Setter Property="Background" Value="{DynamicResource Brush.Bg0}" />
@@ -244,7 +246,6 @@
         <Setter Property="Width" Value="40" />
         <Setter Property="Height" Value="36" />
         <Setter Property="Padding" Value="0" />
-        <Setter Property="FontFamily" Value="{StaticResource FluentIcons}" />
         <Setter Property="FontSize" Value="16" />
         <Setter Property="Background" Value="{DynamicResource Brush.Panel2}" />
         <Setter Property="Foreground" Value="{DynamicResource Brush.Text}" />

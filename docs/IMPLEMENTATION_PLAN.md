@@ -24,6 +24,9 @@ Reihenfolge: Risk-first.
 ## Milestone 6 — Tray/Autoplay/SingleInstance/Autostart
 - Tray Menü dynamisch, Close-to-tray, Autoplay Preconditions, Mutex+IPC, Task Scheduler
 
+### Note (Option C2)
+- Refactor startup orchestration into a dedicated `StartupService`/`AppHost` (settings->logging->library->preconditions->tray/main window) to replace the interim C1 StartupWindow bootstrap.
+
 ## Milestone 7 — Logging UI
 - Serilog daily files, Logs Seite (Liste+Viewer, Delete/Refresh/Open folder)
 

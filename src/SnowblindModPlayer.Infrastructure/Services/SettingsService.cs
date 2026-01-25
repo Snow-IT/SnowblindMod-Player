@@ -18,6 +18,7 @@ public class SettingsService : ISettingsService
         { "SelectedMonitorId", string.Empty },
         { "DefaultVideoId", string.Empty },
         { "ThemePreference", "System" },
+        { "VideosViewMode", "Tile" },
         { "LoopEnabled", true },
         { "FillScreen", true },
         { "KeepAspectRatio", false },
@@ -138,6 +139,7 @@ public class SettingsService : ISettingsService
 
             if (_settings.TryGetValue("ThemePreference", out var themePref))
                 System.Diagnostics.Debug.WriteLine($"Loaded ThemePreference={themePref}");
+
         }
         catch (Exception ex)
         {

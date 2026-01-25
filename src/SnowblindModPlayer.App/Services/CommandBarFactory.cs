@@ -6,14 +6,6 @@ namespace SnowblindModPlayer.Services;
 
 public static class CommandBarFactory
 {
-    // Segoe Fluent Icons Glyphs
-    private const string IconAdd = "\uE710";        // Add
-    private const string IconDelete = "\uE74D";     // Delete
-    private const string IconStar = "\uE735";       // FavoriteStar
-    private const string IconStarFill = "\uE734";   // FavoriteStarFill
-    private const string IconRefresh = "\uE72C";    // Refresh
-    private const string IconFolder = "\uE8B7";     // FolderOpen
-
     public static object? CreateForPage(string page, object? view)
     {
         return page switch
@@ -31,9 +23,11 @@ public static class CommandBarFactory
 
         var panel = new StackPanel { Orientation = Orientation.Horizontal };
 
+        var iconFont = new System.Windows.Media.FontFamily("Segoe MDL2 Assets");
+
         var addBtn = new Button
         {
-            Content = IconAdd,
+            Content = new TextBlock { Text = "\uE710", FontFamily = iconFont, FontSize = 16 },
             ToolTip = "Add video",
             Style = (Style)Application.Current.FindResource("CommandButton"),
             Margin = new Thickness(0, 0, 8, 0),
@@ -42,7 +36,7 @@ public static class CommandBarFactory
 
         var delBtn = new Button
         {
-            Content = IconDelete,
+            Content = new TextBlock { Text = "\uE74D", FontFamily = iconFont, FontSize = 16 },
             ToolTip = "Remove selected video",
             Style = (Style)Application.Current.FindResource("IconButton"),
             Margin = new Thickness(0, 0, 8, 0),
@@ -51,7 +45,7 @@ public static class CommandBarFactory
 
         var starBtn = new Button
         {
-            Content = IconStar,
+            Content = new TextBlock { Text = "\uE734", FontFamily = iconFont, FontSize = 16 },
             ToolTip = "Set as default video",
             Style = (Style)Application.Current.FindResource("IconButton"),
             Command = vm.SetDefaultCommand
@@ -66,12 +60,12 @@ public static class CommandBarFactory
 
     private static UIElement? CreateLogs(SnowblindModPlayer.Views.LogsView? view)
     {
-        // Logs commands will be wired once LogsViewModel is implemented
         var panel = new StackPanel { Orientation = Orientation.Horizontal };
+        var iconFont = new System.Windows.Media.FontFamily("Segoe MDL2 Assets");
 
         var refreshBtn = new Button
         {
-            Content = IconRefresh,
+            Content = new TextBlock { Text = "\uE72C", FontFamily = iconFont, FontSize = 16 },
             ToolTip = "Refresh logs",
             Style = (Style)Application.Current.FindResource("IconButton"),
             Margin = new Thickness(0, 0, 8, 0)
@@ -79,7 +73,7 @@ public static class CommandBarFactory
 
         var deleteBtn = new Button
         {
-            Content = IconDelete,
+            Content = new TextBlock { Text = "\uE74D", FontFamily = iconFont, FontSize = 16 },
             ToolTip = "Delete selected log",
             Style = (Style)Application.Current.FindResource("IconButton"),
             Margin = new Thickness(0, 0, 8, 0),
@@ -88,7 +82,7 @@ public static class CommandBarFactory
 
         var folderBtn = new Button
         {
-            Content = IconFolder,
+            Content = new TextBlock { Text = "\uE838", FontFamily = iconFont, FontSize = 16 },
             ToolTip = "Open logs folder",
             Style = (Style)Application.Current.FindResource("IconButton")
         };

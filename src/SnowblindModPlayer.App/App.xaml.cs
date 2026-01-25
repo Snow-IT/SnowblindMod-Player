@@ -2,7 +2,6 @@ using System.Windows;
 using Microsoft.Extensions.DependencyInjection;
 using SnowblindModPlayer.Core.Services;
 using SnowblindModPlayer.Infrastructure;
-using SnowblindModPlayer.Infrastructure.Services;
 using SnowblindModPlayer.Services;
 using SnowblindModPlayer.UI.ViewModels;
 using SnowblindModPlayer.ViewModels;
@@ -17,6 +16,10 @@ public partial class App : Application
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+
+        // Show startup window
+        var startupWindow = new StartupWindow();
+        startupWindow.Show();
 
         try
         {
@@ -42,50 +45,72 @@ public partial class App : Application
 
             var settingsService = _serviceProvider.GetRequiredService<ISettingsService>();
 
-            // Create main window
-            System.Diagnostics.Debug.WriteLine("Creating main window...");
-            MainWindow = _serviceProvider.GetRequiredService<MainWindow>();
-            var viewModel = _serviceProvider.GetRequiredService<SnowblindModPlayer.ViewModels.MainWindowViewModel>();
-            MainWindow.DataContext = viewModel;
-            MainWindow.Show();
-            System.Diagnostics.Debug.WriteLine("? Main window shown");
-
-            // Load settings + apply theme without blocking UI thread
+            // Load settings async without blocking UI thread
             _ = Task.Run(async () =>
             {
                 try
                 {
                     System.Diagnostics.Debug.WriteLine("Loading settings...");
-                    var loadTask = settingsService.LoadAsync();
-                    var completed = await Task.WhenAny(loadTask, Task.Delay(TimeSpan.FromSeconds(3)));
-                    if (completed != loadTask)
-                    {
-                        System.Diagnostics.Debug.WriteLine("? Settings load timed out after 3s; continuing with defaults");
-                        return;
-                    }
-
+                    await settingsService.LoadAsync();
                     System.Diagnostics.Debug.WriteLine("? Settings loaded");
-                    Dispatcher.Invoke(() =>
+
+                    // Apply theme and create main window on UI thread
+                    await Dispatcher.InvokeAsync(() =>
                     {
-                        System.Diagnostics.Debug.WriteLine("Applying theme...");
-                        ThemeService.ApplyTheme(this, ThemeService.ResolveIsLightTheme(settingsService));
-                        System.Diagnostics.Debug.WriteLine("? Theme applied");
+                        try
+                        {
+                            System.Diagnostics.Debug.WriteLine("Applying theme...");
+                            ThemeService.ApplyTheme(this, ThemeService.ResolveIsLightTheme(settingsService));
+                            System.Diagnostics.Debug.WriteLine("? Theme applied");
+
+                            System.Diagnostics.Debug.WriteLine("Creating main window...");
+                            MainWindow = _serviceProvider.GetRequiredService<MainWindow>();
+                            var viewModel = _serviceProvider.GetRequiredService<SnowblindModPlayer.ViewModels.MainWindowViewModel>();
+                            MainWindow.DataContext = viewModel;
+                            
+                            startupWindow.Close();
+                            MainWindow.Show();
+                            System.Diagnostics.Debug.WriteLine("? Main window shown");
+                        }
+                        catch (Exception ex)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"? Main window creation failed: {ex}");
+                            MessageBox.Show($"Application startup failed:\n\n{ex.Message}", "Fatal Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                            try { startupWindow.Close(); } catch { }
+                            Shutdown(1);
+                        }
                     });
                 }
                 catch (Exception ex)
                 {
                     System.Diagnostics.Debug.WriteLine($"? Settings load failed: {ex}");
+                    await Dispatcher.InvokeAsync(() =>
+                    {
+                        MessageBox.Show($"Settings load failed:\n\n{ex.Message}\n\nContinuing with defaults.", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
+                        
+                        try
+                        {
+                            MainWindow = _serviceProvider!.GetRequiredService<MainWindow>();
+                            var viewModel = _serviceProvider.GetRequiredService<SnowblindModPlayer.ViewModels.MainWindowViewModel>();
+                            MainWindow.DataContext = viewModel;
+                            startupWindow.Close();
+                            MainWindow.Show();
+                        }
+                        catch (Exception innerEx)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"? Fallback window creation failed: {innerEx}");
+                            try { startupWindow.Close(); } catch { }
+                            Shutdown(1);
+                        }
+                    });
                 }
             });
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"? Application startup failed: {ex}");
-            System.Diagnostics.Debug.WriteLine($"InnerException: {ex.InnerException}");
-            System.Diagnostics.Debug.WriteLine($"Stack trace: {ex.StackTrace}");
-            
-            MessageBox.Show($"Application startup failed:\n\n{ex.Message}\n\nInnerException: {ex.InnerException?.Message}", 
-                "Fatal Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show($"Application startup failed:\n\n{ex.Message}", "Fatal Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            try { startupWindow.Close(); } catch { }
             Shutdown(1);
         }
     }

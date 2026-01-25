@@ -12,6 +12,7 @@ public static class SettingsServiceExtensions
     private const string LoopEnabledKey = "LoopEnabled";
     private const string FillScreenKey = "FillScreen";
     private const string ThemePreferenceKey = "ThemePreference";
+    private const string VideosViewModeKey = "VideosViewMode";
 
     public static string GetMediaFolder(this ISettingsService settings)
     {
@@ -91,6 +92,16 @@ public static class SettingsServiceExtensions
     public static void SetThemePreference(this ISettingsService settings, string preference)
     {
         settings.Set(ThemePreferenceKey, preference);
+    }
+
+    public static string GetVideosViewMode(this ISettingsService settings)
+    {
+        return settings.Get(VideosViewModeKey, "Tile");
+    }
+
+    public static void SetVideosViewMode(this ISettingsService settings, string mode)
+    {
+        settings.Set(VideosViewModeKey, mode);
     }
 
     private static string GetDefaultMediaFolder()
