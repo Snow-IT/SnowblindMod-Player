@@ -1,54 +1,295 @@
+using Microsoft.Data.Sqlite;
 using SnowblindModPlayer.Core.Services;
+using SnowblindModPlayer.Infrastructure.Data;
 
 namespace SnowblindModPlayer.Infrastructure.Services;
 
 public class LibraryService : ILibraryService
 {
-    private readonly List<MediaItem> _mediaItems = new();
+    private readonly LibraryDbContext _dbContext;
+    private readonly ISettingsService _settingsService;
+    private const string DefaultVideoIdKey = "DefaultVideoId";
 
-    public Task<IReadOnlyList<MediaItem>> GetAllMediaAsync()
+    public LibraryService(LibraryDbContext dbContext, ISettingsService settingsService)
     {
-        return Task.FromResult<IReadOnlyList<MediaItem>>(_mediaItems.AsReadOnly());
+        _dbContext = dbContext;
+        _settingsService = settingsService;
     }
 
-    public Task<MediaItem?> GetMediaByIdAsync(string id)
+    public async Task<IReadOnlyList<MediaItem>> GetAllMediaAsync()
     {
-        var item = _mediaItems.FirstOrDefault(x => x.Id == id);
-        return Task.FromResult(item);
-    }
+        var mediaItems = new List<MediaItem>();
 
-    public Task AddMediaAsync(MediaItem media)
-    {
-        _mediaItems.Add(media);
-        return Task.CompletedTask;
-    }
-
-    public Task RemoveMediaAsync(string id)
-    {
-        _mediaItems.RemoveAll(x => x.Id == id);
-        return Task.CompletedTask;
-    }
-
-    public Task SetDefaultVideoAsync(string? videoId)
-    {
-        // TODO: Store in settings
-        return Task.CompletedTask;
-    }
-
-    public Task<MediaItem?> GetDefaultVideoAsync()
-    {
-        // TODO: Retrieve from settings
-        return Task.FromResult<MediaItem?>(null);
-    }
-
-    public Task CleanupOrphanedEntriesAsync()
-    {
-        // E1: Remove entries with non-existent storedPath
-        var toRemove = _mediaItems.Where(x => !File.Exists(x.StoredPath)).ToList();
-        foreach (var item in toRemove)
+        try
         {
-            _mediaItems.Remove(item);
+            using (var connection = _dbContext.GetConnection())
+            {
+                await connection.OpenAsync();
+
+                using (var command = connection.CreateCommand())
+                {
+                    command.CommandText = @"
+                        SELECT Id, DisplayName, OriginalSourcePath, StoredPath, DateAdded, ThumbnailPath
+                        FROM Media
+                        ORDER BY DateAdded DESC
+                    ";
+
+                    using (var reader = await command.ExecuteReaderAsync())
+                    {
+                        while (await reader.ReadAsync())
+                        {
+                            mediaItems.Add(new MediaItem
+                            {
+                                Id = reader.GetString(0),
+                                DisplayName = reader.GetString(1),
+                                OriginalSourcePath = reader.GetString(2),
+                                StoredPath = reader.GetString(3),
+                                DateAdded = DateTime.Parse(reader.GetString(4)),
+                                ThumbnailPath = reader.IsDBNull(5) ? string.Empty : reader.GetString(5)
+                            });
+                        }
+                    }
+                }
+            }
         }
-        return Task.CompletedTask;
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"GetAllMediaAsync failed: {ex.Message}");
+        }
+
+        return mediaItems.AsReadOnly();
+    }
+
+    public async Task<MediaItem?> GetMediaByIdAsync(string id)
+    {
+        try
+        {
+            using (var connection = _dbContext.GetConnection())
+            {
+                await connection.OpenAsync();
+
+                using (var command = connection.CreateCommand())
+                {
+                    command.CommandText = @"
+                        SELECT Id, DisplayName, OriginalSourcePath, StoredPath, DateAdded, ThumbnailPath
+                        FROM Media
+                        WHERE Id = @id
+                    ";
+                    command.Parameters.AddWithValue("@id", id);
+
+                    using (var reader = await command.ExecuteReaderAsync())
+                    {
+                        if (await reader.ReadAsync())
+                        {
+                            return new MediaItem
+                            {
+                                Id = reader.GetString(0),
+                                DisplayName = reader.GetString(1),
+                                OriginalSourcePath = reader.GetString(2),
+                                StoredPath = reader.GetString(3),
+                                DateAdded = DateTime.Parse(reader.GetString(4)),
+                                ThumbnailPath = reader.IsDBNull(5) ? string.Empty : reader.GetString(5)
+                            };
+                        }
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"GetMediaByIdAsync failed: {ex.Message}");
+        }
+
+        return null;
+    }
+
+    public async Task AddMediaAsync(MediaItem media)
+    {
+        try
+        {
+            using (var connection = _dbContext.GetConnection())
+            {
+                await connection.OpenAsync();
+
+                using (var command = connection.CreateCommand())
+                {
+                    command.CommandText = @"
+                        INSERT INTO Media (Id, DisplayName, OriginalSourcePath, StoredPath, DateAdded, ThumbnailPath)
+                        VALUES (@id, @displayName, @originalSourcePath, @storedPath, @dateAdded, @thumbnailPath)
+                    ";
+                    command.Parameters.AddWithValue("@id", media.Id);
+                    command.Parameters.AddWithValue("@displayName", media.DisplayName);
+                    command.Parameters.AddWithValue("@originalSourcePath", media.OriginalSourcePath);
+                    command.Parameters.AddWithValue("@storedPath", media.StoredPath);
+                    command.Parameters.AddWithValue("@dateAdded", media.DateAdded.ToString("O"));
+                    command.Parameters.AddWithValue("@thumbnailPath", media.ThumbnailPath ?? string.Empty);
+
+                    await command.ExecuteNonQueryAsync();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"AddMediaAsync failed: {ex.Message}");
+            throw;
+        }
+    }
+
+    public async Task RemoveMediaAsync(string id)
+    {
+        try
+        {
+            using (var connection = _dbContext.GetConnection())
+            {
+                await connection.OpenAsync();
+
+                // First get the media to find files to delete
+                var media = await GetMediaByIdAsync(id);
+                if (media != null)
+                {
+                    // Delete the video file
+                    if (!string.IsNullOrEmpty(media.StoredPath) && File.Exists(media.StoredPath))
+                    {
+                        File.Delete(media.StoredPath);
+                    }
+
+                    // Delete the thumbnail
+                    if (!string.IsNullOrEmpty(media.ThumbnailPath) && File.Exists(media.ThumbnailPath))
+                    {
+                        File.Delete(media.ThumbnailPath);
+                    }
+                }
+
+                // Delete from database
+                using (var command = connection.CreateCommand())
+                {
+                    command.CommandText = "DELETE FROM Media WHERE Id = @id";
+                    command.Parameters.AddWithValue("@id", id);
+                    await command.ExecuteNonQueryAsync();
+                }
+
+                // Reset default video if it was this video
+                var defaultVideoId = _settingsService.Get(DefaultVideoIdKey, string.Empty);
+                if (defaultVideoId == id)
+                {
+                    _settingsService.Set(DefaultVideoIdKey, string.Empty);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"RemoveMediaAsync failed: {ex.Message}");
+            throw;
+        }
+    }
+
+    public async Task SetDefaultVideoAsync(string? videoId)
+    {
+        if (videoId != null)
+        {
+            var media = await GetMediaByIdAsync(videoId);
+            if (media == null)
+            {
+                throw new ArgumentException($"Media with ID '{videoId}' not found");
+            }
+        }
+
+        _settingsService.Set(DefaultVideoIdKey, videoId ?? string.Empty);
+    }
+
+    public async Task<MediaItem?> GetDefaultVideoAsync()
+    {
+        var defaultVideoId = _settingsService.Get(DefaultVideoIdKey, string.Empty);
+        if (string.IsNullOrEmpty(defaultVideoId))
+            return null;
+
+        return await GetMediaByIdAsync(defaultVideoId);
+    }
+
+    public async Task CleanupOrphanedEntriesAsync()
+    {
+        try
+        {
+            using (var connection = _dbContext.GetConnection())
+            {
+                await connection.OpenAsync();
+
+                // Find all media entries where StoredPath doesn't exist
+                var orphanedIds = new List<string>();
+
+                using (var command = connection.CreateCommand())
+                {
+                    command.CommandText = "SELECT Id, StoredPath FROM Media";
+
+                    using (var reader = await command.ExecuteReaderAsync())
+                    {
+                        while (await reader.ReadAsync())
+                        {
+                            var id = reader.GetString(0);
+                            var storedPath = reader.GetString(1);
+
+                            if (!File.Exists(storedPath))
+                            {
+                                orphanedIds.Add(id);
+                            }
+                        }
+                    }
+                }
+
+                // Delete orphaned entries
+                foreach (var id in orphanedIds)
+                {
+                    await RemoveMediaAsync(id);
+                    System.Diagnostics.Debug.WriteLine($"Cleaned up orphaned media entry: {id}");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"CleanupOrphanedEntriesAsync failed: {ex.Message}");
+        }
+    }
+
+    public async Task<MediaItem?> GetMediaByOriginalPathAsync(string originalPath)
+    {
+        try
+        {
+            using (var connection = _dbContext.GetConnection())
+            {
+                await connection.OpenAsync();
+
+                using (var command = connection.CreateCommand())
+                {
+                    command.CommandText = @"
+                        SELECT Id, DisplayName, OriginalSourcePath, StoredPath, DateAdded, ThumbnailPath
+                        FROM Media
+                        WHERE OriginalSourcePath = @originalPath
+                    ";
+                    command.Parameters.AddWithValue("@originalPath", originalPath);
+
+                    using (var reader = await command.ExecuteReaderAsync())
+                    {
+                        if (await reader.ReadAsync())
+                        {
+                            return new MediaItem
+                            {
+                                Id = reader.GetString(0),
+                                DisplayName = reader.GetString(1),
+                                OriginalSourcePath = reader.GetString(2),
+                                StoredPath = reader.GetString(3),
+                                DateAdded = DateTime.Parse(reader.GetString(4)),
+                                ThumbnailPath = reader.IsDBNull(5) ? string.Empty : reader.GetString(5)
+                            };
+                        }
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"GetMediaByOriginalPathAsync failed: {ex.Message}");
+        }
+
+        return null;
     }
 }

@@ -24,6 +24,9 @@ public partial class App : Application
         var pathService = _serviceProvider.GetRequiredService<IAppDataPathService>();
         pathService.EnsureDirectoriesExist();
 
+        // Initialize database and run migrations
+        _serviceProvider.InitializeDatabaseAsync().Wait();
+
         // Load settings
         var settingsService = _serviceProvider.GetRequiredService<ISettingsService>();
         settingsService.LoadAsync().Wait();
