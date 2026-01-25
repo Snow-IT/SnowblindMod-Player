@@ -1,0 +1,56 @@
+<UserControl x:Class="SnowblindModPlayer.Views.SettingsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Background="White">
+    <Border Padding="20">
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <StackPanel Orientation="Vertical">
+                <!-- Display Settings Section -->
+                <StackPanel Orientation="Vertical" Margin="0,0,0,20">
+                    <TextBlock Text="Display Settings" FontSize="16" FontWeight="Bold" Margin="0,0,0,15"/>
+                    
+                    <Border BorderBrush="#DCDCDC" BorderThickness="1" Padding="15" Background="#F9F9F9">
+                        <StackPanel Orientation="Vertical">
+                            <TextBlock Text="Monitor Selection" FontSize="13" FontWeight="SemiBold"/>
+                            <TextBlock Text="Select which monitor to use for fullscreen playback:" FontSize="11" Foreground="#666666" Margin="0,0,0,15"/>
+                            
+                            <!-- Embedded Monitor Selection View -->
+                            <ContentControl x:Name="MonitorSelectionHost" />
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+                <!-- Playback Settings Section -->
+                <StackPanel Orientation="Vertical" Margin="0,0,0,20">
+                    <TextBlock Text="Playback Settings" FontSize="16" FontWeight="Bold" Margin="0,0,0,15"/>
+                    
+                    <Border BorderBrush="#DCDCDC" BorderThickness="1" Padding="15" Background="#F9F9F9">
+                        <StackPanel Orientation="Vertical">
+                            <CheckBox Content="Enable Loop Playback" Margin="0,0,0,10"/>
+                            <CheckBox Content="Fill Screen (stretch video)" Margin="0,0,0,10"/>
+                            <CheckBox Content="Keep Aspect Ratio" Margin="0,0,0,10"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+                <!-- About Section -->
+                <StackPanel Orientation="Vertical" Margin="0,0,0,20">
+                    <TextBlock Text="About" FontSize="16" FontWeight="Bold" Margin="0,0,0,15"/>
+                    
+                    <Border BorderBrush="#DCDCDC" BorderThickness="1" Padding="15" Background="#F9F9F9">
+                        <StackPanel Orientation="Vertical">
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                <TextBlock Text="Version: " FontWeight="SemiBold" Width="150"/>
+                                <TextBlock Text="0.1.0"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                <TextBlock Text="Application: " FontWeight="SemiBold" Width="150"/>
+                                <TextBlock Text="Snowblind-Mod Player"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </StackPanel>
+        </ScrollViewer>
+    </Border>
+</UserControl>

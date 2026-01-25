@@ -1,0 +1,85 @@
+<Window x:Class="SnowblindModPlayer.PlayerWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Snowblind-Mod Player" Height="600" Width="900"
+        Background="#000000"
+        KeyDown="Window_KeyDown"
+        MouseDown="Window_MouseDown"
+        MouseDoubleClick="Window_MouseDoubleClick"
+        MouseWheel="Window_MouseWheel"
+        WindowStyle="SingleBorderWindow"
+        ResizeMode="CanResize"
+        Loaded="Window_Loaded"
+        Closing="Window_Closing">
+    <Grid>
+        <!-- VLC Media Element -->
+        <Grid x:Name="MediaGrid" Background="#000000">
+            <Canvas x:Name="VideoCanvas" Background="#000000"/>
+        </Grid>
+
+        <!-- Controls Overlay (visible on hover or during playback) -->
+        <Border x:Name="ControlsOverlay" 
+                Background="#00000080"
+                VerticalAlignment="Bottom"
+                Opacity="0.8"
+                Padding="10">
+            <StackPanel Orientation="Vertical">
+                <!-- Progress Bar -->
+                <ProgressBar x:Name="ProgressBar" 
+                             Height="5" 
+                             Background="#333333"
+                             Foreground="#0078D4"
+                             MouseDown="ProgressBar_MouseDown"/>
+
+                <!-- Control Buttons -->
+                <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                    <Button x:Name="PlayPauseButton" 
+                            Content="?" 
+                            Width="40" Height="40"
+                            Click="PlayPauseButton_Click"
+                            Background="#0078D4"
+                            Foreground="White"
+                            Margin="0,0,10,0"/>
+                    
+                    <TextBlock x:Name="TimeLabel" 
+                               Text="0:00 / 0:00"
+                               Foreground="White"
+                               VerticalAlignment="Center"
+                               Margin="0,0,10,0"/>
+
+                    <Slider x:Name="VolumeSlider" 
+                            Width="100" 
+                            Minimum="0" 
+                            Maximum="100" 
+                            Value="50"
+                            VerticalAlignment="Center"
+                            Margin="0,0,10,0"/>
+
+                    <TextBlock x:Name="VolumeLabel" 
+                               Text="50%"
+                               Foreground="White"
+                               VerticalAlignment="Center"
+                               Margin="0,0,10,0"/>
+
+                    <Button x:Name="FullscreenButton" 
+                            Content="?" 
+                            Width="40" Height="40"
+                            Click="FullscreenButton_Click"
+                            Background="#0078D4"
+                            Foreground="White"
+                            HorizontalAlignment="Right"/>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <!-- Error Message -->
+        <TextBlock x:Name="ErrorMessage" 
+                   Text="" 
+                   Foreground="Red"
+                   FontSize="14"
+                   TextWrapping="Wrap"
+                   Padding="20"
+                   VerticalAlignment="Center"
+                   HorizontalAlignment="Center"/>
+    </Grid>
+</Window>

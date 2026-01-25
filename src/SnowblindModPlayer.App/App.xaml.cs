@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using SnowblindModPlayer.Core.Services;
 using SnowblindModPlayer.Infrastructure;
 using SnowblindModPlayer.UI.ViewModels;
+using SnowblindModPlayer.Views;
 
 namespace SnowblindModPlayer;
 
@@ -50,8 +51,14 @@ public partial class App : Application
         // Register infrastructure services
         services.AddInfrastructureServices();
 
-        // Register UI services
+        // Register UI services and ViewModels
         services.AddSingleton<MainWindow>();
         services.AddSingleton<MainWindowViewModel>();
+        services.AddSingleton<PlayerWindow>();
+        services.AddSingleton<PlayerWindowViewModel>();
+        services.AddSingleton<MonitorSelectionViewModel>();
+
+        // Register Views
+        services.AddSingleton<SettingsView>();
     }
 }
