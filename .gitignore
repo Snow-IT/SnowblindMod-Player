@@ -1,0 +1,112 @@
+
+## ============
+## .NET / Visual Studio
+## ============
+
+# Build artifacts
+bin/
+obj/
+[Bb]uild/
+[Ll]og/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+
+# VS features
+.vs/
+*.user
+*.userosscache
+*.suo
+*.cache
+*.sln.docstates
+
+# Auto-generated files
+*.pidb
+*.svclog
+*.aps
+*.ncb
+*.psess
+*.vsp
+*.vspx
+*.nunit.xml
+
+# Test results
+TestResult*/
+TestResults/
+*.coverage
+*.coveragexml
+
+# NuGet
+*.nupkg
+packages/
+.nuget/
+*.snupkg
+project.lock.json
+project.assets.json
+
+# MSBuild
+*.binlog
+
+# Publish output
+publish/
+artifacts/
+
+# Rider / ReSharper / JetBrains
+.idea/
+*.DotSettings.user
+_ReSharper*/
+*.dotCover
+
+# Logs
+*.log
+
+## ============
+## WPF / App
+## ============
+
+# Generated thumbnails, caches, local state
+Thumbs.db
+*.db-shm
+*.db-wal
+
+# AppData-driven
+# (Library + Thumbnails + Logs entstehen erst RUNTIME, niemals tracken)
+SnowblindModPlayer_AppData/
+*.sqlite
+*.db
+
+## ============
+## LibVLC / Native libs
+## ============
+
+# NuGet native libs stay in packages folder (ignored above).
+# Local dev copies (falls du testweise extrahierst)
+vlc/
+vlc-*/
+libvlc/
+libvlc-*/
+
+## ============
+## GitHub Actions / CI
+## ============
+
+# Runs / temp artifacts
+*.zip
+*.7z
+
+## ============
+## OS files
+## ============
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# macOS (falls Repo mal auf Mac geöffnet wird)
+.DS_Store
+.AppleDouble
+.LSOverride
