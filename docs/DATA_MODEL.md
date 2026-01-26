@@ -25,13 +25,13 @@ Empfohlene Keys (Auszug):
 ## Library (SQLite)
 Pfad: `%AppData%\SnowblindModPlayer\library.db`
 
-### Tabelle `media_items`
-- `id` TEXT PRIMARY KEY
-- `display_name` TEXT NOT NULL
-- `original_source_path` TEXT NOT NULL UNIQUE
-- `stored_path` TEXT NOT NULL
-- `date_added` TEXT NOT NULL (ISO)
-- `thumbnail_path` TEXT NOT NULL
+### Tabelle `Media`
+- `Id` TEXT PRIMARY KEY
+- `DisplayName` TEXT NOT NULL
+- `OriginalSourcePath` TEXT NOT NULL UNIQUE
+- `StoredPath` TEXT NOT NULL UNIQUE
+- `DateAdded` TEXT NOT NULL (ISO)
+- `ThumbnailPath` TEXT
 
 ### Startup Cleanup (E1)
-- Items ohne existierenden `stored_path` werden beim Start gelöscht (inkl. Thumbnail).
+- Items ohne existierenden `StoredPath` werden beim Start gelöscht (inkl. Thumbnail, DefaultVideo-Reset).
