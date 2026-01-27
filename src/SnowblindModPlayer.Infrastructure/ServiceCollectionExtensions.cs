@@ -11,6 +11,7 @@ public static class ServiceCollectionExtensions
     {
         services.AddSingleton<IAppDataPathService, AppDataPathService>();
         services.AddSingleton<ISettingsService, SettingsService>();
+        services.AddSingleton<ISingleInstanceService, SingleInstanceService>();
         
         // Register LibraryDbContext
         services.AddSingleton<LibraryDbContext>(sp =>
@@ -20,16 +21,10 @@ public static class ServiceCollectionExtensions
             return new LibraryDbContext(dbPath);
         });
 
-        // Register LibraryService
         services.AddSingleton<ILibraryService, LibraryService>();
-        
-        // Register ThumbnailService and Queue
-        services.AddSingleton<IThumbnailService, ThumbnailService>();
+        services.AddSingleton<IThumbnailService, ThumbnailServiceFFmpeg>();
         services.AddSingleton<IThumbnailQueueService, ThumbnailQueueService>();
-        
-        // Register ImportService
         services.AddSingleton<IImportService, ImportService>();
-        
         services.AddSingleton<ILoggingService, LoggingService>();
         services.AddSingleton<IMonitorService, MonitorService>();
         services.AddSingleton<IPlaybackService, PlaybackService>();

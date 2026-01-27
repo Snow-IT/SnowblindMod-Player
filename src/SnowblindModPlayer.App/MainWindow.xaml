@@ -13,9 +13,9 @@
         <shell:WindowChrome CaptionHeight="38" ResizeBorderThickness="6" CornerRadius="10" GlassFrameThickness="0" UseAeroCaptionButtons="True" />
     </shell:WindowChrome.WindowChrome>
     <Window.Resources>
-        <!-- Segoe MDL2 Assets Glyphs -->
-        <sys:String x:Key="IconVideo">&#xE714;</sys:String>
-        <sys:String x:Key="IconLog">&#xE7C3;</sys:String>
+        <!-- Fluent Icons (with MDL2 fallback in FontFamily) -->
+        <sys:String x:Key="IconVideo">&#xF5B0;</sys:String>
+        <sys:String x:Key="IconLog">&#xE8FD;</sys:String>
         <sys:String x:Key="IconSettings">&#xE713;</sys:String>
         <sys:String x:Key="IconMenu">&#xE700;</sys:String>
 
@@ -94,9 +94,9 @@
 
                 <!-- Caption buttons -->
                 <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Stretch">
-                    <Button x:Name="MinimizeButton" Style="{StaticResource CaptionButton}" Content="&#xE921;" ToolTip="Minimize" Click="MinimizeButton_Click" shell:WindowChrome.IsHitTestVisibleInChrome="True" FontFamily="Segoe MDL2 Assets" />
-                    <Button x:Name="MaxRestoreButton" Style="{StaticResource CaptionButton}" Content="&#xE922;" ToolTip="Maximize" Click="MaxRestoreButton_Click" shell:WindowChrome.IsHitTestVisibleInChrome="True" FontFamily="Segoe MDL2 Assets" />
-                    <Button x:Name="CloseButton" Style="{StaticResource CaptionCloseButton}" Content="&#xE8BB;" ToolTip="Close" Click="CloseButton_Click" shell:WindowChrome.IsHitTestVisibleInChrome="True" FontFamily="Segoe MDL2 Assets" />
+                    <Button x:Name="MinimizeButton" Style="{StaticResource CaptionButton}" Content="&#xE921;" ToolTip="Minimize" Click="MinimizeButton_Click" shell:WindowChrome.IsHitTestVisibleInChrome="True" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" />
+                    <Button x:Name="MaxRestoreButton" Style="{StaticResource CaptionButton}" Content="&#xE922;" ToolTip="Maximize" Click="MaxRestoreButton_Click" shell:WindowChrome.IsHitTestVisibleInChrome="True" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" />
+                    <Button x:Name="CloseButton" Style="{StaticResource CaptionCloseButton}" Content="&#xE8BB;" ToolTip="Close" Click="CloseButton_Click" shell:WindowChrome.IsHitTestVisibleInChrome="True" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" />
                 </StackPanel>
             </Grid>
         </Border>
@@ -110,15 +110,15 @@
                         Command="{Binding ToggleSidebarCommand}"
                         ToolTip="Toggle sidebar"
                         HorizontalAlignment="Left"
-                        Margin="4,28,0,10"
-                        FontFamily="Segoe MDL2 Assets" />
+                        Margin="4,40,0,10"
+                        FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" />
 
                 <!-- Settings at bottom -->
                 <Button DockPanel.Dock="Bottom" Command="{Binding NavigateSettingsCommand}" 
                         Style="{StaticResource SidebarNavButtonWithIndicator}"
                         Tag="{Binding SelectedPage, Converter={StaticResource SettingsPageConverter}}">
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="{StaticResource IconSettings}" FontFamily="Segoe MDL2 Assets" 
+                        <TextBlock Text="{StaticResource IconSettings}" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" 
                                    FontSize="16" VerticalAlignment="Center" Margin="0,0,10,0" />
                         <TextBlock Text="Settings" VerticalAlignment="Center">
                             <TextBlock.Style>
@@ -140,7 +140,7 @@
                             Style="{StaticResource SidebarNavButtonWithIndicator}"
                             Tag="{Binding SelectedPage, Converter={StaticResource VideosPageConverter}}">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="{StaticResource IconVideo}" FontFamily="Segoe MDL2 Assets" 
+                            <TextBlock Text="{StaticResource IconVideo}" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" 
                                        FontSize="16" Width="26" Margin="0,0,10,0" VerticalAlignment="Center" TextAlignment="Center" LineHeight="18" />
                             <TextBlock Text="Videos" VerticalAlignment="Center">
                                 <TextBlock.Style>
@@ -161,7 +161,7 @@
                             Style="{StaticResource SidebarNavButtonWithIndicator}"
                             Tag="{Binding SelectedPage, Converter={StaticResource LogsPageConverter}}">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="{StaticResource IconLog}" FontFamily="Segoe MDL2 Assets" 
+                            <TextBlock Text="{StaticResource IconLog}" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" 
                                        FontSize="16" Width="26" Margin="0,0,10,0" VerticalAlignment="Center" TextAlignment="Center" LineHeight="18" />
                             <TextBlock Text="Logs" VerticalAlignment="Center">
                                 <TextBlock.Style>

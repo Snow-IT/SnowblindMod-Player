@@ -23,13 +23,13 @@ public static class CommandBarFactory
 
         var panel = new StackPanel { Orientation = Orientation.Horizontal };
 
-        var iconFont = new System.Windows.Media.FontFamily("Segoe MDL2 Assets");
+        var iconFont = new System.Windows.Media.FontFamily("Segoe Fluent Icons, Segoe MDL2 Assets");
 
         var addBtn = new Button
         {
             Content = new TextBlock { Text = "\uE710", FontFamily = iconFont, FontSize = 16 },
             ToolTip = "Add video",
-            Style = (Style)Application.Current.FindResource("CommandButton"),
+            Style = (Style)Application.Current.FindResource("IconButton"),
             Margin = new Thickness(0, 0, 8, 0),
             Command = vm.ImportCommand
         };
@@ -61,7 +61,7 @@ public static class CommandBarFactory
     private static UIElement? CreateLogs(SnowblindModPlayer.Views.LogsView? view)
     {
         var panel = new StackPanel { Orientation = Orientation.Horizontal };
-        var iconFont = new System.Windows.Media.FontFamily("Segoe MDL2 Assets");
+        var iconFont = new System.Windows.Media.FontFamily("Segoe Fluent Icons, Segoe MDL2 Assets");
 
         var refreshBtn = new Button
         {
@@ -82,7 +82,7 @@ public static class CommandBarFactory
 
         var folderBtn = new Button
         {
-            Content = new TextBlock { Text = "\uE838", FontFamily = iconFont, FontSize = 16 },
+            Content = new TextBlock { Text = "\uED25", FontFamily = iconFont, FontSize = 16 },
             ToolTip = "Open logs folder",
             Style = (Style)Application.Current.FindResource("IconButton")
         };

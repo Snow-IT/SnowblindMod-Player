@@ -12,9 +12,26 @@ namespace SnowblindModPlayer;
 public partial class App : Application
 {
     private ServiceProvider? _serviceProvider;
+    private ITrayService? _trayService;
+    private ISingleInstanceService? _singleInstanceService;
+    private MainWindow? _mainWindow;
+    private bool _shutdownRequested;
 
     protected override void OnStartup(StartupEventArgs e)
     {
+        // Register exception handlers FIRST, before anything else
+        DispatcherUnhandledException += (s, args) =>
+        {
+            System.Diagnostics.Debug.WriteLine($"? UNHANDLED EXCEPTION: {args.Exception}");
+            args.Handled = true;
+            Shutdown(1);
+        };
+        AppDomain.CurrentDomain.UnhandledException += (s, args) =>
+        {
+            System.Diagnostics.Debug.WriteLine($"? UNHANDLED APPDOMAIN EXCEPTION: {args.ExceptionObject}");
+            Shutdown(1);
+        };
+        
         base.OnStartup(e);
 
         // Show startup window
@@ -31,6 +48,20 @@ public partial class App : Application
             ConfigureServices(services);
             _serviceProvider = services.BuildServiceProvider();
             System.Diagnostics.Debug.WriteLine("? DI container built");
+
+            // Single instance guard
+            var singleInstance = _serviceProvider.GetRequiredService<ISingleInstanceService>();
+            _singleInstanceService = singleInstance;
+            System.Diagnostics.Debug.WriteLine("? Attempting to acquire primary instance...");
+            if (!singleInstance.TryAcquirePrimary())
+            {
+                System.Diagnostics.Debug.WriteLine("? Another instance detected, notifying primary and exiting");
+                singleInstance.NotifyPrimaryInstance();
+                Shutdown();
+                return;
+            }
+            System.Diagnostics.Debug.WriteLine("? Primary instance acquired");
+            _singleInstanceService.StartListening(() => Dispatcher.Invoke(ShowMainWindowFromTray));
 
             // Initialize AppData paths
             System.Diagnostics.Debug.WriteLine("Initializing AppData paths...");
@@ -64,18 +95,67 @@ public partial class App : Application
                             System.Diagnostics.Debug.WriteLine("? Theme applied");
 
                             System.Diagnostics.Debug.WriteLine("Creating main window...");
-                            MainWindow = _serviceProvider.GetRequiredService<MainWindow>();
+                            _mainWindow = _serviceProvider.GetRequiredService<MainWindow>();
                             var viewModel = _serviceProvider.GetRequiredService<SnowblindModPlayer.ViewModels.MainWindowViewModel>();
-                            MainWindow.DataContext = viewModel;
+                            _mainWindow.DataContext = viewModel;
+
+                            // Initialize tray with full menu support
+                            _trayService = _serviceProvider.GetRequiredService<ITrayService>();
+                            var playbackOrchestrator = _serviceProvider.GetRequiredService<PlaybackOrchestrator>();
+                            var libraryService = _serviceProvider.GetRequiredService<ILibraryService>();
                             
+                            _trayService.Initialize(
+                                onShowRequested: ShowMainWindowFromTray,
+                                onExitRequested: ExitFromTray,
+                                onPlayDefaultRequested: playbackOrchestrator.PlayDefaultVideoAsync,
+                                onPlayVideoRequested: playbackOrchestrator.PlayVideoAsync,
+                                onStopRequested: async () =>
+                                {
+                                    var playbackService = _serviceProvider.GetRequiredService<IPlaybackService>();
+                                    await playbackService.StopAsync();
+                                    System.Diagnostics.Debug.WriteLine("? Playback stopped from tray");
+                                },
+                                getVideosForMenu: async () =>
+                                {
+                                    try
+                                    {
+                                        var allVideos = await libraryService.GetAllMediaAsync();
+                                        var defaultVideo = await libraryService.GetDefaultVideoAsync();
+                                        
+                                        // Sort: default first (if set), then alphabetical (per SPEC 5.2)
+                                        var videos = allVideos
+                                            .OrderBy(v => (defaultVideo != null && v.Id == defaultVideo.Id) ? 0 : 1)
+                                            .ThenBy(v => v.DisplayName)
+                                            .Select(m => new VideoItem { Id = m.Id, DisplayName = m.DisplayName })
+                                            .ToList();
+                                        
+                                        return videos;
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        System.Diagnostics.Debug.WriteLine($"? Error fetching videos for tray menu: {ex.Message}");
+                                        return new List<VideoItem>();
+                                    }
+                                });
+
+                            // Close-to-tray handling
+                            _mainWindow.Closing += MainWindow_Closing;
+
                             startupWindow.Close();
-                            MainWindow.Show();
-                            System.Diagnostics.Debug.WriteLine("? Main window shown");
+                            
+                            // Start hidden in tray (per spec: Close-to-tray)
+                            // MUST set as MainWindow so WPF has a message loop
+                            MainWindow = _mainWindow;
+                            _mainWindow.WindowStartupLocation = System.Windows.WindowStartupLocation.CenterScreen;
+                            _mainWindow.ShowInTaskbar = false;
+                            _mainWindow.Show(); // required for message loop
+                            _mainWindow.Visibility = System.Windows.Visibility.Hidden;
+                            System.Diagnostics.Debug.WriteLine("? Main window initialized hidden for tray mode");
                         }
                         catch (Exception ex)
                         {
                             System.Diagnostics.Debug.WriteLine($"? Main window creation failed: {ex}");
-                            MessageBox.Show($"Application startup failed:\n\n{ex.Message}", "Fatal Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                            System.Windows.MessageBox.Show($"Application startup failed:\n\n{ex.Message}", "Fatal Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
                             try { startupWindow.Close(); } catch { }
                             Shutdown(1);
                         }
@@ -86,15 +166,49 @@ public partial class App : Application
                     System.Diagnostics.Debug.WriteLine($"? Settings load failed: {ex}");
                     await Dispatcher.InvokeAsync(() =>
                     {
-                        MessageBox.Show($"Settings load failed:\n\n{ex.Message}\n\nContinuing with defaults.", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
-                        
+                        System.Windows.MessageBox.Show($"Settings load failed:\n\n{ex.Message}\n\nContinuing with defaults.", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
+
                         try
                         {
-                            MainWindow = _serviceProvider!.GetRequiredService<MainWindow>();
+                            _mainWindow = _serviceProvider!.GetRequiredService<MainWindow>();
                             var viewModel = _serviceProvider.GetRequiredService<SnowblindModPlayer.ViewModels.MainWindowViewModel>();
-                            MainWindow.DataContext = viewModel;
+                            _mainWindow.DataContext = viewModel;
+
+                             _trayService = _serviceProvider.GetRequiredService<ITrayService>();
+                             var playbackOrchestrator = _serviceProvider.GetRequiredService<PlaybackOrchestrator>();
+                             var libraryService = _serviceProvider.GetRequiredService<ILibraryService>();
+                             
+                             _trayService.Initialize(
+                                 onShowRequested: ShowMainWindowFromTray,
+                                 onExitRequested: ExitFromTray,
+                                 onPlayDefaultRequested: playbackOrchestrator.PlayDefaultVideoAsync,
+                                 onPlayVideoRequested: playbackOrchestrator.PlayVideoAsync,
+                                 onStopRequested: async () =>
+                                 {
+                                     var playbackService = _serviceProvider.GetRequiredService<IPlaybackService>();
+                                     await playbackService.StopAsync();
+                                 },
+                                 getVideosForMenu: async () =>
+                                 {
+                                     try
+                                     {
+                                         var allVideos = await libraryService.GetAllMediaAsync();
+                                         var defaultVideo = await libraryService.GetDefaultVideoAsync();
+                                         var videos = allVideos
+                                             .OrderBy(v => (defaultVideo != null && v.Id == defaultVideo.Id) ? 0 : 1)
+                                             .ThenBy(v => v.DisplayName)
+                                             .Select(m => new VideoItem { Id = m.Id, DisplayName = m.DisplayName })
+                                             .ToList();
+                                         return videos;
+                                     }
+                                     catch { return new List<VideoItem>(); }
+                                 });
+
+                            // Close-to-tray handling
+                            _mainWindow.Closing += MainWindow_Closing;
+
                             startupWindow.Close();
-                            MainWindow.Show();
+                            _mainWindow.Show();
                         }
                         catch (Exception innerEx)
                         {
@@ -109,10 +223,34 @@ public partial class App : Application
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"? Application startup failed: {ex}");
-            MessageBox.Show($"Application startup failed:\n\n{ex.Message}", "Fatal Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            System.Windows.MessageBox.Show($"Application startup failed:\n\n{ex.Message}", "Fatal Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
             try { startupWindow.Close(); } catch { }
             Shutdown(1);
         }
+    }
+
+    private void MainWindow_Closing(object? sender, System.ComponentModel.CancelEventArgs e)
+    {
+        if (_shutdownRequested)
+        {
+            return;
+        }
+
+        // Close-to-tray: cancel closing and hide window
+        e.Cancel = true;
+        _trayService?.SetMainWindowVisible(false);
+    }
+
+    private void ShowMainWindowFromTray()
+    {
+        _trayService?.SetMainWindowVisible(true);
+    }
+
+    private void ExitFromTray()
+    {
+        _shutdownRequested = true;
+        _trayService?.Dispose();
+        Shutdown();
     }
 
     protected override void OnExit(ExitEventArgs e)
@@ -123,6 +261,8 @@ public partial class App : Application
             settingsService.SaveAsync().Wait();
         }
 
+        _trayService?.Dispose();
+        _singleInstanceService?.Dispose();
         _serviceProvider?.Dispose();
         base.OnExit(e);
     }
@@ -146,5 +286,11 @@ public partial class App : Application
 
         // Register ViewModels
         services.AddSingleton<SnowblindModPlayer.ViewModels.VideosViewModel>();
+
+        // Tray service
+        services.AddSingleton<ITrayService, TrayService>();
+
+        // Unified playback orchestrator (single entry point for all "play video" scenarios)
+        services.AddSingleton<PlaybackOrchestrator>();
     }
 }

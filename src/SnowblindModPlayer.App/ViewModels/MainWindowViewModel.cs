@@ -1,4 +1,5 @@
 using SnowblindModPlayer.Core.Services;
+using SnowblindModPlayer.Infrastructure.Services;
 using SnowblindModPlayer.Services;
 using SnowblindModPlayer.UI.MVVM;
 using SnowblindModPlayer.Views;
@@ -22,7 +23,16 @@ public class MainWindowViewModel : ViewModelBase
     public bool SidebarCollapsed
     {
         get => _sidebarCollapsed;
-        set => SetProperty(ref _sidebarCollapsed, value);
+        set
+        {
+            var oldValue = _sidebarCollapsed;
+            SetProperty(ref _sidebarCollapsed, value);
+            if (oldValue != value)
+            {
+                _settingsService.SetSidebarCollapsed(value);
+                _ = _settingsService.SaveAsync();
+            }
+        }
     }
 
     private object? _commandBarContent;
@@ -69,6 +79,9 @@ public class MainWindowViewModel : ViewModelBase
         _videosView = videosView;
         _logsView = logsView;
         _settingsView = settingsView;
+
+        // Load sidebar collapsed state from settings
+        _sidebarCollapsed = _settingsService.GetSidebarCollapsed();
 
         NavigateVideosCommand = new RelayCommand(_ => SelectedPage = "Videos");
         NavigateLogsCommand = new RelayCommand(_ => SelectedPage = "Logs");

@@ -34,11 +34,20 @@ public class PlaybackService : IPlaybackService
     public PlaybackService()
     {
         LibVLCSharp.Shared.Core.Initialize();
+        
+        // VLC flags based on proven working PowerShell script
         _libVLC = new LibVLCSharp.Shared.LibVLC(
-            "--no-osd",           // Disable OSD completely
-            "--no-video-title-show",
-            "--quiet"
+            "--repeat",                     // Repeat playlist
+            "--loop",                       // Loop each file
+            "--autoscale",                  // Auto-scale to window
+            "--no-osd",                     // No on-screen display
+            "--no-video-title-show",        // No video title overlay
+            "--no-sub-autodetect-file",     // No subtitle auto-loading
+            "--no-video-deco",              // No window decorations
+            "--quiet",                      // Suppress output
+            "--disable-screensaver"         // Keep screen active
         );
+        
         _mediaPlayer = new LibVLCSharp.Shared.MediaPlayer(_libVLC);
 
         _mediaPlayer.LengthChanged += (s, e) =>
@@ -51,34 +60,25 @@ public class PlaybackService : IPlaybackService
             _currentPositionMs = (long)(_durationMs * e.Position);
             PlaybackPositionChanged?.Invoke(this, EventArgs.Empty);
         };
-        _mediaPlayer.EndReached += async (s, e) =>
+        
+        // EndReached: Both --repeat and --loop should handle looping, but fallback just in case
+        _mediaPlayer.EndReached += (s, e) =>
         {
             if (_loopEnabled && _mediaLoaded && !string.IsNullOrEmpty(_currentMediaPath))
             {
-                if (_uiDispatcher != null)
+                try
                 {
-                    _uiDispatcher(async () =>
-                    {
-                        await Task.Delay(100);
-                        try
-                        {
-                            _mediaPlayer.Stop();
-                            _mediaPlayer.Time = 0;
-                            _mediaPlayer.Play();
-                            System.Diagnostics.Debug.WriteLine("Loop: Restarted (Stop ? Time=0 ? Play)");
-                        }
-                        catch (Exception ex)
-                        {
-                            System.Diagnostics.Debug.WriteLine($"Loop restart failed: {ex}");
-                        }
-                    });
-                    return;  // Don't fire MediaEnded when looping succeeds
+                    _mediaPlayer.Position = 0.0f;
+                    System.Diagnostics.Debug.WriteLine("Loop: Position reset to 0");
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Loop restart failed: {ex}");
                 }
             }
-
-            // Only fire MediaEnded if not looping or loop setup failed
             MediaEndReached?.Invoke(this, EventArgs.Empty);
         };
+        
         _mediaPlayer.Playing += (s, e) => PlayingStateChanged?.Invoke(this, EventArgs.Empty);
         _mediaPlayer.Paused += (s, e) => PlayingStateChanged?.Invoke(this, EventArgs.Empty);
         _mediaPlayer.Stopped += (s, e) => PlayingStateChanged?.Invoke(this, EventArgs.Empty);
@@ -102,6 +102,10 @@ public class PlaybackService : IPlaybackService
         {
             LoadMedia(videoPath);
             _mediaPlayer.Play();
+            
+            // FORCE STRETCH after play - these work directly on MediaPlayer
+            _mediaPlayer.AspectRatio = null;  // null = fill window
+            _mediaPlayer.Scale = 0;           // 0 = fit to window
         }
         catch (Exception ex)
         {
@@ -134,7 +138,7 @@ public class PlaybackService : IPlaybackService
         media.AddOption(":no-osd");
         media.AddOption(":no-video-title-show");
         media.AddOption(":quiet");
-        media.AddOption(":disable-lua");  // Disable Lua (can create UI elements)
+        media.AddOption(":disable-lua");
         
         return media;
     }

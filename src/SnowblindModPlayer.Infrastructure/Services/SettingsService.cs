@@ -24,6 +24,16 @@ public class SettingsService : ISettingsService
         { "KeepAspectRatio", false },
         { "Volume", 50 },
         { "Muted", false },
+        { "FullscreenOnStart", true },
+        { "ScalingMode", "Fill" },
+        { "AutostartEnabled", false },
+        { "AutoplayEnabled", false },
+        { "StartDelaySeconds", 0 },
+        { "LoggingLevel", "Warn" },
+        { "TrayCloseHintEnabled", true },
+        { "SidebarCollapsed", false },
+        { "LanguageMode", "System" },
+        { "FixedLanguage", "en-US" },
     };
 
     public SettingsService(IAppDataPathService appDataPathService)

@@ -97,6 +97,11 @@ libvlc-*/
 *.zip
 *.7z
 
+bin/
+obj/
+*.exe
+*.dll
+
 ## ============
 ## OS files
 ## ============

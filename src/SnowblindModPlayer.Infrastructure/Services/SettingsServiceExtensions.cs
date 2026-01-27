@@ -15,6 +15,14 @@ public static class SettingsServiceExtensions
     private const string ScalingModeKey = "ScalingMode";
     private const string ThemePreferenceKey = "ThemePreference";
     private const string VideosViewModeKey = "VideosViewMode";
+    private const string AutostartEnabledKey = "AutostartEnabled";
+    private const string AutoplayEnabledKey = "AutoplayEnabled";
+    private const string StartDelaySecondsKey = "StartDelaySeconds";
+    private const string LoggingLevelKey = "LoggingLevel";
+    private const string TrayCloseHintEnabledKey = "TrayCloseHintEnabled";
+    private const string SidebarCollapsedKey = "SidebarCollapsed";
+    private const string LanguageModeKey = "LanguageMode";
+    private const string FixedLanguageKey = "FixedLanguage";
 
     public static string GetMediaFolder(this ISettingsService settings)
     {
@@ -130,5 +138,85 @@ public static class SettingsServiceExtensions
     {
         var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
         return Path.Combine(appDataPath, "SnowblindModPlayer", "media");
+    }
+
+    public static bool GetAutostartEnabled(this ISettingsService settings)
+    {
+        return settings.Get(AutostartEnabledKey, false);
+    }
+
+    public static void SetAutostartEnabled(this ISettingsService settings, bool enabled)
+    {
+        settings.Set(AutostartEnabledKey, enabled);
+    }
+
+    public static bool GetAutoplayEnabled(this ISettingsService settings)
+    {
+        return settings.Get(AutoplayEnabledKey, false);
+    }
+
+    public static void SetAutoplayEnabled(this ISettingsService settings, bool enabled)
+    {
+        settings.Set(AutoplayEnabledKey, enabled);
+    }
+
+    public static int GetStartDelaySeconds(this ISettingsService settings)
+    {
+        return settings.Get(StartDelaySecondsKey, 0);
+    }
+
+    public static void SetStartDelaySeconds(this ISettingsService settings, int seconds)
+    {
+        settings.Set(StartDelaySecondsKey, Math.Max(0, seconds));
+    }
+
+    public static string GetLoggingLevel(this ISettingsService settings)
+    {
+        return settings.Get(LoggingLevelKey, "Warn");
+    }
+
+    public static void SetLoggingLevel(this ISettingsService settings, string level)
+    {
+        settings.Set(LoggingLevelKey, level);
+    }
+
+    public static bool GetTrayCloseHintEnabled(this ISettingsService settings)
+    {
+        return settings.Get(TrayCloseHintEnabledKey, true);
+    }
+
+    public static void SetTrayCloseHintEnabled(this ISettingsService settings, bool enabled)
+    {
+        settings.Set(TrayCloseHintEnabledKey, enabled);
+    }
+
+    public static bool GetSidebarCollapsed(this ISettingsService settings)
+    {
+        return settings.Get(SidebarCollapsedKey, false);
+    }
+
+    public static void SetSidebarCollapsed(this ISettingsService settings, bool collapsed)
+    {
+        settings.Set(SidebarCollapsedKey, collapsed);
+    }
+
+    public static string GetLanguageMode(this ISettingsService settings)
+    {
+        return settings.Get(LanguageModeKey, "System");
+    }
+
+    public static void SetLanguageMode(this ISettingsService settings, string mode)
+    {
+        settings.Set(LanguageModeKey, mode);
+    }
+
+    public static string GetFixedLanguage(this ISettingsService settings)
+    {
+        return settings.Get(FixedLanguageKey, "en-US");
+    }
+
+    public static void SetFixedLanguage(this ISettingsService settings, string language)
+    {
+        settings.Set(FixedLanguageKey, language);
     }
 }

@@ -122,12 +122,17 @@ public class VideosViewModel : ViewModelBase
         try
         {
             var mediaItems = await _libraryService.GetAllMediaAsync();
+            var defaultVideo = await _libraryService.GetDefaultVideoAsync();
+            
             Application.Current.Dispatcher.Invoke(() =>
             {
                 _videos.Clear();
                 foreach (var item in mediaItems)
                     _videos.Add(item);
                 _filteredVideos.Refresh();
+                
+                // Update default video ID for badge visibility
+                DefaultVideoId = defaultVideo?.Id ?? string.Empty;
             });
         }
         catch (Exception ex)
