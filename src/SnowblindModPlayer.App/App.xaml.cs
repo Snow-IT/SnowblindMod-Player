@@ -121,14 +121,18 @@ public partial class App : Application
                                     {
                                         var allVideos = await libraryService.GetAllMediaAsync();
                                         var defaultVideo = await libraryService.GetDefaultVideoAsync();
-                                        
-                                        // Sort: default first (if set), then alphabetical (per SPEC 5.2)
+
                                         var videos = allVideos
-                                            .OrderBy(v => (defaultVideo != null && v.Id == defaultVideo.Id) ? 0 : 1)
+                                            .Select(m => new VideoItem
+                                            {
+                                                Id = m.Id,
+                                                DisplayName = m.DisplayName,
+                                                IsDefault = defaultVideo != null && m.Id == defaultVideo.Id
+                                            })
+                                            .OrderBy(v => v.IsDefault ? 0 : 1)
                                             .ThenBy(v => v.DisplayName)
-                                            .Select(m => new VideoItem { Id = m.Id, DisplayName = m.DisplayName })
                                             .ToList();
-                                        
+
                                         return videos;
                                     }
                                     catch (Exception ex)
@@ -151,6 +155,32 @@ public partial class App : Application
                             _mainWindow.Show(); // required for message loop
                             _mainWindow.Visibility = System.Windows.Visibility.Hidden;
                             System.Diagnostics.Debug.WriteLine("? Main window initialized hidden for tray mode");
+
+                            // Autoplay on startup (SPEC 2.6: Autoplay with startup delay)
+                            var autoplayEnabled = settingsService.Get("AutoplayEnabled", false);
+                            var autoplayDelayMs = settingsService.Get("AutoplayDelayMs", 0);
+                            
+                            if (autoplayEnabled)
+                            {
+                                _ = Task.Run(async () =>
+                                {
+                                    try
+                                    {
+                                        if (autoplayDelayMs > 0)
+                                        {
+                                            System.Diagnostics.Debug.WriteLine($"? Autoplay delayed by {autoplayDelayMs}ms");
+                                            await Task.Delay(autoplayDelayMs);
+                                        }
+                                        
+                                        System.Diagnostics.Debug.WriteLine("? Starting autoplay...");
+                                        await playbackOrchestrator.PlayDefaultVideoAsync();
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        System.Diagnostics.Debug.WriteLine($"? Autoplay failed: {ex.Message}");
+                                    }
+                                });
+                            }
                         }
                         catch (Exception ex)
                         {
@@ -194,11 +224,18 @@ public partial class App : Application
                                      {
                                          var allVideos = await libraryService.GetAllMediaAsync();
                                          var defaultVideo = await libraryService.GetDefaultVideoAsync();
+
                                          var videos = allVideos
-                                             .OrderBy(v => (defaultVideo != null && v.Id == defaultVideo.Id) ? 0 : 1)
+                                             .Select(m => new VideoItem
+                                             {
+                                                 Id = m.Id,
+                                                 DisplayName = m.DisplayName,
+                                                 IsDefault = defaultVideo != null && m.Id == defaultVideo.Id
+                                             })
+                                             .OrderBy(v => v.IsDefault ? 0 : 1)
                                              .ThenBy(v => v.DisplayName)
-                                             .Select(m => new VideoItem { Id = m.Id, DisplayName = m.DisplayName })
                                              .ToList();
+
                                          return videos;
                                      }
                                      catch { return new List<VideoItem>(); }
@@ -209,6 +246,24 @@ public partial class App : Application
 
                             startupWindow.Close();
                             _mainWindow.Show();
+                            
+                            // Autoplay (fallback path, no delay in error state)
+                            var autoplayEnabled = settingsService.Get("AutoplayEnabled", false);
+                            if (autoplayEnabled)
+                            {
+                                _ = Task.Run(async () =>
+                                {
+                                    try
+                                    {
+                                        System.Diagnostics.Debug.WriteLine("? Starting autoplay (fallback path)...");
+                                        await playbackOrchestrator.PlayDefaultVideoAsync();
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        System.Diagnostics.Debug.WriteLine($"? Autoplay failed: {ex.Message}");
+                                    }
+                                });
+                            }
                         }
                         catch (Exception innerEx)
                         {

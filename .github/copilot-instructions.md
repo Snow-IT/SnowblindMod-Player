@@ -15,18 +15,21 @@ Follow docs/SPEC_FINAL.md strictly.
 - Logging: Serilog daily rolling file (YYYY-MM-DD.log), level live changeable
 - Packaging: Portable ZIP via GitHub Actions (tag v*)
 
-## Current Implementation State (Phase C - Tray Integration)
+## Current Implementation State (Phase C-D Continuation)
 
 ### Completed
 - ✓ Tray icon (transparent background, native P/Invoke)
-- ✓ Tray context menu: Show → Play Default → Play Video [Dynamic] → Stop → Exit
+- ✓ Tray context menu: Show → Play Default → Play Video [Dynamic Submenu] → Stop → Exit
+- ✓ Play Video submenu properly attached (MF_POPUP flag) with video list
 - ✓ PlaybackOrchestrator: unified async entry point for all playback scenarios
 - ✓ Monitor selection respected (PlayerWindow.PositionOnSelectedMonitor)
 - ✓ Tray menu video list sorted (default first, then alphabetical per SPEC 5.2)
+- ✓ Autoplay on startup (configurable delay via AutoplayDelayMs setting)
+- ✓ VariantB.ico added as secondary icon resource for testing
 
 ### Next (Immediate)
-- Autoplay on startup (uses PlaybackOrchestrator.PlayDefaultVideoAsync)
-- VideosView UI integration (doppelklick via PlaybackOrchestrator.PlayVideoAsync)
+- NotificationOrchestrator implementation (Banner, Dialog, Toast services)
+- Import/Remove with LibraryOrchestrator (Phase D proper)
 
 ## Agent behavior
 
@@ -44,7 +47,7 @@ Follow docs/SPEC_FINAL.md strictly.
 3) ✓ Storage hybrid + cleanup (COMPLETE)
 4) ✓ Import/remove + thumbnail queue (IN PROGRESS)
 5) ✓ Videos UI list/tile + toolbar (IN PROGRESS)
-6) ✓ Tray + autoplay + single instance + autostart (Tray COMPLETE, Autoplay/SingleInstance/Autostart PENDING)
+6) ✓ Tray + autoplay + single instance + autostart (Tray COMPLETE, **Play Video Submenu COMPLETE, Autoplay COMPLETE**, SingleInstance/Autostart PENDING)
 7) Logs UI + file viewer (PENDING)
 8) GitHub Actions portable ZIP (PENDING)
 
@@ -57,7 +60,7 @@ Follow docs/SPEC_FINAL.md strictly.
   - `PlayVideoAsync(videoId)`: Play specific video (opens PlayerWindow, applies settings, starts playback)
   - `PlayDefaultVideoAsync()`: Play default/favorite video
   - `ApplyPlaybackSettingsAsync()`: Sync volume, mute, loop from settings service
-- **Usage:** Tray menu, future UI clicks, future Autoplay
+- **Usage:** Tray menu (Play Video submenu), Autoplay on startup, future UI clicks
 - **Design Pattern:** Service Orchestrator / Facade (combines multiple services into single unified interface)
 
 ### PlaybackService (Existing - Phase A/B)
@@ -66,8 +69,14 @@ Follow docs/SPEC_FINAL.md strictly.
 - **Responsibility:** Low-level LibVLC playback (Play/Pause/Stop/Seek/Volume/Mute)
 - **Do NOT add DI:** Would violate single-instance constraint
 
-### TrayService (Phase C)
+### TrayService (Phase C - Enhanced)
 - **File:** `src/SnowblindModPlayer.App/Services/TrayService.cs`
 - **Implementation:** Native Windows P/Invoke Shell_NotifyIcon (no external UI framework)
 - **Callbacks:** Routes to PlaybackOrchestrator for Play/Stop operations
-- **Menu Structure:** Populated dynamically from ILibraryService
+- **Menu Structure:** 
+  - Show → MainWindow
+  - Play Default → PlaybackOrchestrator.PlayDefaultVideoAsync()
+  - **Play Video (Submenu)** → Dynamic list of videos → PlaybackOrchestrator.PlayVideoAsync(videoId)
+  - Stop → PlaybackService.StopAsync()
+  - Exit → App.Shutdown()
+- **Video List Sorting:** Default first (★), then alphabetical (SPEC 5.2)

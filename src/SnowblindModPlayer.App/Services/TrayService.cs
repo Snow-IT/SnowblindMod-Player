@@ -111,6 +111,7 @@ public class TrayService : ITrayService
     private const int GWL_WNDPROC = -4;
     private const uint MF_STRING = 0x00000000;
     private const uint MF_SEPARATOR = 0x00000800;
+    private const uint MF_POPUP = 0x00000010;
     private const uint TPM_LEFTALIGN = 0x0000;
     private const uint TPM_RIGHTBUTTON = 0x0002;
     private const uint TPM_RETURNCMD = 0x0100;
@@ -241,8 +242,10 @@ public class TrayService : ITrayService
             var resource = System.Windows.Application.GetResourceStream(new Uri(packUri));
             if (resource?.Stream != null)
             {
-                var icon = new Icon(resource.Stream);
-                System.Diagnostics.Debug.WriteLine("? Custom tray icon loaded from resources");
+                // Load specific icon size for tray (32x32 for better visibility)
+                var icon = new Icon(resource.Stream, new System.Drawing.Size(32, 32));
+                
+                System.Diagnostics.Debug.WriteLine($"? Custom tray icon loaded from resources (32x32)");
                 return icon;
             }
 
@@ -262,8 +265,8 @@ public class TrayService : ITrayService
             var filePath = Path.Combine(AppContext.BaseDirectory, "Assets", "Icon.ico");
             if (File.Exists(filePath))
             {
-                var icon = new Icon(filePath);
-                System.Diagnostics.Debug.WriteLine($"? Custom tray icon loaded from file: {filePath}");
+                var icon = new Icon(filePath, new System.Drawing.Size(32, 32));
+                System.Diagnostics.Debug.WriteLine($"? Custom tray icon loaded from file: {filePath} (32x32)");
                 return icon;
             }
         }
@@ -300,18 +303,18 @@ public class TrayService : ITrayService
             }
             else
             {
-                // Sort: alphabetical
-                var sorted = videos.OrderBy(v => v.DisplayName).ToList();
-                
-                for (int i = 0; i < sorted.Count; i++)
+                // List already sorted: default first, then alphabetical
+                for (int i = 0; i < videos.Count; i++)
                 {
-                    var videoId = sorted[i].Id;
-                    var displayName = sorted[i].DisplayName;
+                    var video = videos[i];
+                    // Mark default video with [DEFAULT] prefix for better compatibility
+                    var displayName = video.IsDefault ? $"[DEFAULT] {video.DisplayName}" : video.DisplayName;
                     AppendMenu(videosMenu, MF_STRING, (IntPtr)(CMD_VIDEO_BASE + i), displayName);
                 }
             }
             
-            AppendMenu(menu, MF_STRING, (IntPtr)CMD_VIDEOS_SUBMENU, "Play Video");
+            // Attach videos submenu to main menu (MF_POPUP flag)
+            AppendMenu(menu, MF_POPUP, videosMenu, "Play Video");
             
             AppendMenu(menu, MF_STRING, (IntPtr)CMD_STOP, "Stop");
             AppendMenu(menu, MF_SEPARATOR, IntPtr.Zero, null);

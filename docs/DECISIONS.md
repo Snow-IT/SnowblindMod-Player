@@ -161,28 +161,28 @@ Below is the **complete notification inventory**. User to mark preferred display
 | # | Scenario | Text (German) | Banner | Dialog | Toast | Log | Notes |
 |---|----------|---------------|--------|--------|-------|-----|-------|
 | **IMPORT** |
-| 1 | Video imported successfully | "Video erfolgreich importiert: [name]" | ? | - | - | ? | |
-| 2 | Import failed - file not readable | "Fehler beim Import: Datei nicht lesbar" | ? | ? | - | ? | Blocking? |
-| 3 | Import - duplicate detected | "Video existiert bereits: [name]" | ? | - | - | ? | Info only |
-| 4 | Import - thumbnail generation failed | "Thumbnail konnte nicht generiert werden" | ? | - | - | ? | Non-blocking |
+| 1 | Video imported successfully | "Video erfolgreich importiert: [name]" | X | - | - | X | |
+| 2 | Import failed - file not readable | "Fehler beim Import: Datei nicht lesbar" | X | - | - | X | |
+| 3 | Import - duplicate detected | "Video existiert bereits: [name]" | X | X | - | X | Choose if should be imported anyway |
+| 4 | Import - thumbnail generation failed | "Thumbnail konnte nicht generiert werden" | X | - | - | X |  |
 | **REMOVE** |
-| 5 | Delete confirmation | "Video wirklich löschen? Datei wird permanent gelöscht." | - | ? | - | - | Blocking |
-| 6 | Delete successful | "Video gelöscht: [name]" | ? | - | - | ? | |
-| 7 | Delete failed | "Fehler beim Löschen: [reason]" | ? | ? | - | ? | Blocking? |
+| 5 | Delete confirmation | "Video wirklich lï¿½schen? Datei wird permanent gelï¿½scht." | - | X | - | - |  |
+| 6 | Delete successful | "Video gelï¿½scht: [name]" | X | - | - | X | |
+| 7 | Delete failed | "Fehler beim Lï¿½schen: [reason]" | X | - | - | X |  |
 | **PLAYBACK** |
-| 8 | No default video set | "Kein Standard-Video definiert" | ? | ? | - | ? | When user clicks "Play Default" |
-| 9 | Selected monitor not available | "Monitor nicht verfügbar - Autoplay übersprungen" | ? | ? | - | ? | Blocking? |
-| 10 | Autoplay started (NEW) | "SnowblindMod-Player hat Standard-Video gestartet: [name]" | ? | - | - | ? | Tray Toast? |
+| 8 | No default video set | "Kein Standard-Video definiert" | X | - | X | X | When user clicks "Play Default" or Autoplay is active and the app starts |
+| 9 | Selected monitor not available | "Monitor nicht verfï¿½gbar - Autoplay ï¿½bersprungen" | X | - | X | X | skip playback |
+| 10 | Autoplay started (NEW) | "SnowblindMod-Player hat Standard-Video gestartet: [name]" | X | - | X | X | |
 | **DEFAULT VIDEO** |
-| 11 | Set as default | "Als Standard-Video gespeichert: [name]" | ? | - | - | ? | |
-| 12 | Default cleared | "Standard-Video zurückgesetzt" | ? | - | - | ? | |
+| 11 | Set as default | "Als Standard-Video gespeichert: [name]" | X | - | - | X | |
+| 12 | Default cleared | "Standard-Video zurï¿½ckgesetzt" | X | - | - | X | we dont have this option, but may be useful if video was deleted or not found |
 | **TRAY** |
-| 13 | Minimize to tray | "SnowblindMod-Player läuft im Tray weiter" | - | - | ? | ? | Windows native toast (5-7s) |
+| 13 | Minimize to tray | "SnowblindMod-Player lï¿½uft im Tray weiter" | - | - | X | X | Windows native toast (5-7s) |
 | **SETTINGS** |
-| 14 | Monitor selection invalid | "Ausgewählter Monitor existiert nicht" | ? | ? | - | ? | |
-| 15 | Settings saved | "Einstellungen gespeichert" | ? | - | - | ? | Optional/subtle? |
+| 14 | Monitor selection invalid | "Ausgewï¿½hlter Monitor existiert nicht" | X | - | - | X | |
+| 15 | Settings saved | "Einstellungen gespeichert" | X | - | - | X | subtle. maybe with a much shorter display time then other banners |
 | **LIBRARY/AUTOSTART** |
-| 16 | Library loaded at startup | "Bibliothek geladen: X Videos" | - | - | - | ? | Silent log only |
+| 16 | Library loaded at startup | "Bibliothek geladen: X Videos" | - | - | - | X |  |
 
 #### Design Details for NotificationOrchestrator
 

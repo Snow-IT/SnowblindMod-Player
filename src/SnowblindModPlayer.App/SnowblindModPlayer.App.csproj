@@ -24,8 +24,13 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Resource Include="..\..\mockups\tray_icon_transparent.ico">
+    <!-- Primary tray icon -->
+    <Resource Include="..\..\mockups\icon32.ico">
       <Link>Assets\Icon.ico</Link>
+    </Resource>
+    <!-- Fallback icon -->
+    <Resource Include="..\..\mockups\tray_icon_transparent.ico">
+      <Link>Assets\Icon_Transparent.ico</Link>
     </Resource>
     <Resource Include="Assets\tray_icon.png" />
     <Resource Include="Assets\tray_icon_frosted.png" />

@@ -5,6 +5,7 @@
         xmlns:converters="clr-namespace:SnowblindModPlayer.Converters"
         xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
         Title="Snowblind-Mod Player" Height="600" Width="900"
+        Icon="pack://application:,,,/Assets/Icon.ico"
         Background="{DynamicResource Brush.Bg0}"
         WindowStyle="None"
         ResizeMode="CanResize"
