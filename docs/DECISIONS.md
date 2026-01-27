@@ -243,4 +243,11 @@ ELSE (MainWindow hidden)
 4. **Add to Phase D** (LibraryOrchestrator) or separate quick win
 5. **Refactor existing error handling** to use NotificationOrchestrator
 
----
+## Open TODOs (next session)
+- [ ] Missing file playback via UI: currently opens black window; show notification (Toast/Banner) even when main window hidden/tray. Also surface same toast path as Tray Play Video.
+- [ ] Missing notification for manual delete: play from UI when file missing should notify.
+- [ ] Missing notification for default video deleted on autoplay start; expect banner/toast "No default video set".
+- [ ] Remove missing-file exception: deleting video in app still throws when file already gone.
+- [ ] Thumbnails not generated on import (investigate queue/FFmpeg paths, snapshot timing per spec: 5% with fallbacks 1s/0s).
+- [ ] Banner width: make dynamic (~1/3 app width) instead of fixed 420px; avoid covering buttons.
+- [ ] Monitor selection missing (settings.json cleared): autoplay should skip playback and notify "No monitor selected" (currently may still start on primary).
