@@ -29,6 +29,7 @@ public class SettingsService : ISettingsService
         { "AutostartEnabled", false },
         { "AutoplayEnabled", false },
         { "StartDelaySeconds", 0 },
+        { "MinimizeToTrayOnStartup", false },
         { "LoggingLevel", "Warn" },
         { "TrayCloseHintEnabled", true },
         { "SidebarCollapsed", false },

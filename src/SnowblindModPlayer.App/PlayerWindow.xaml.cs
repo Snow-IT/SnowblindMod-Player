@@ -3,6 +3,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Threading;
 using System.Windows.Interop;
+using System.Windows.Media.Imaging;
 using SnowblindModPlayer.Core.Services;
 using SnowblindModPlayer.Infrastructure.Services;
 using SnowblindModPlayer.UI.ViewModels;
@@ -21,6 +22,7 @@ public partial class PlayerWindow : Window
     public PlayerWindow(IPlaybackService playbackService, IMonitorService monitorService, ISettingsService settingsService, PlayerWindowViewModel viewModel)
     {
         InitializeComponent();
+        Icon = BitmapFrame.Create(new Uri("pack://application:,,,/Assets/Icon.ico", UriKind.Absolute));
         _playbackService = playbackService;
         _monitorService = monitorService;
         _settingsService = settingsService;

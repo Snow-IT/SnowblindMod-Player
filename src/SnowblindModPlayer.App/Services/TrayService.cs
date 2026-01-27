@@ -403,6 +403,7 @@ public class TrayService : ITrayService
 
         if (isVisible)
         {
+            window.ShowInTaskbar = true;
             window.Show();
             window.WindowState = WindowState.Normal;
             window.Activate();
@@ -410,6 +411,7 @@ public class TrayService : ITrayService
         }
         else
         {
+            window.ShowInTaskbar = false;
             window.Hide();
         }
     }

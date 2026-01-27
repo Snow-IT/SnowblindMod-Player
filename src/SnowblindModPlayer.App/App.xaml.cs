@@ -2,6 +2,7 @@ using System.Windows;
 using Microsoft.Extensions.DependencyInjection;
 using SnowblindModPlayer.Core.Services;
 using SnowblindModPlayer.Infrastructure;
+using SnowblindModPlayer.Infrastructure.Services;
 using SnowblindModPlayer.Services;
 using SnowblindModPlayer.UI.ViewModels;
 using SnowblindModPlayer.ViewModels;
@@ -147,18 +148,32 @@ public partial class App : Application
 
                             startupWindow.Close();
                             
-                            // Start hidden in tray (per spec: Close-to-tray)
-                            // MUST set as MainWindow so WPF has a message loop
-                            MainWindow = _mainWindow;
-                            _mainWindow.WindowStartupLocation = System.Windows.WindowStartupLocation.CenterScreen;
-                            _mainWindow.ShowInTaskbar = false;
-                            _mainWindow.Show(); // required for message loop
-                            _mainWindow.Visibility = System.Windows.Visibility.Hidden;
-                            System.Diagnostics.Debug.WriteLine("? Main window initialized hidden for tray mode");
+                            var minimizeToTray = settingsService.GetMinimizeToTrayOnStartup();
+                            if (minimizeToTray)
+                            {
+                                // Start hidden in tray (per spec: Close-to-tray)
+                                MainWindow = _mainWindow;
+                                _mainWindow.WindowStartupLocation = System.Windows.WindowStartupLocation.CenterScreen;
+                                _mainWindow.ShowInTaskbar = false;
+                                _mainWindow.Show(); // required for message loop
+                                _mainWindow.Visibility = System.Windows.Visibility.Hidden;
+                                System.Diagnostics.Debug.WriteLine("? Main window initialized hidden for tray mode");
+                            }
+                            else
+                            {
+                                // Start visible
+                                MainWindow = _mainWindow;
+                                _mainWindow.WindowStartupLocation = System.Windows.WindowStartupLocation.CenterScreen;
+                                _mainWindow.ShowInTaskbar = true;
+                                _mainWindow.Show();
+                                _mainWindow.Visibility = System.Windows.Visibility.Visible;
+                                System.Diagnostics.Debug.WriteLine("? Main window initialized visible");
+                            }
 
                             // Autoplay on startup (SPEC 2.6: Autoplay with startup delay)
-                            var autoplayEnabled = settingsService.Get("AutoplayEnabled", false);
-                            var autoplayDelayMs = settingsService.Get("AutoplayDelayMs", 0);
+                            var autoplayEnabled = settingsService.GetAutoplayEnabled();
+                            var autoplayDelaySeconds = settingsService.GetAutoplayDelaySeconds();
+                            var autoplayDelayMs = Math.Max(0, autoplayDelaySeconds * 1000);
                             
                             if (autoplayEnabled)
                             {
@@ -245,25 +260,38 @@ public partial class App : Application
                             _mainWindow.Closing += MainWindow_Closing;
 
                             startupWindow.Close();
-                            _mainWindow.Show();
-                            
-                            // Autoplay (fallback path, no delay in error state)
-                            var autoplayEnabled = settingsService.Get("AutoplayEnabled", false);
-                            if (autoplayEnabled)
+                            var minimizeToTray = settingsService.GetMinimizeToTrayOnStartup();
+                            if (minimizeToTray)
                             {
-                                _ = Task.Run(async () =>
-                                {
-                                    try
-                                    {
-                                        System.Diagnostics.Debug.WriteLine("? Starting autoplay (fallback path)...");
-                                        await playbackOrchestrator.PlayDefaultVideoAsync();
-                                    }
-                                    catch (Exception ex)
-                                    {
-                                        System.Diagnostics.Debug.WriteLine($"? Autoplay failed: {ex.Message}");
-                                    }
-                                });
+                                _mainWindow.ShowInTaskbar = false;
+                                _mainWindow.Show();
+                                _mainWindow.Visibility = System.Windows.Visibility.Hidden;
                             }
+                            else
+                            {
+                                _mainWindow.ShowInTaskbar = true;
+                                _mainWindow.Show();
+                                _mainWindow.Visibility = System.Windows.Visibility.Visible;
+                            }
+                            
+                             var autoplayEnabled = settingsService.GetAutoplayEnabled();
+                             var autoplayDelayMs = Math.Max(0, settingsService.GetAutoplayDelaySeconds() * 1000);
+                             if (autoplayEnabled)
+                             {
+                                 _ = Task.Run(async () =>
+                                 {
+                                     try
+                                     {
+                                         if (autoplayDelayMs > 0)
+                                             await Task.Delay(autoplayDelayMs);
+                                         await playbackOrchestrator.PlayDefaultVideoAsync();
+                                     }
+                                     catch (Exception ex)
+                                     {
+                                         System.Diagnostics.Debug.WriteLine($"? Autoplay failed: {ex.Message}");
+                                     }
+                                 });
+                             }
                         }
                         catch (Exception innerEx)
                         {
@@ -347,5 +375,7 @@ public partial class App : Application
 
         // Unified playback orchestrator (single entry point for all "play video" scenarios)
         services.AddSingleton<PlaybackOrchestrator>();
+        services.AddSingleton<NotificationOrchestrator>();
+        services.AddSingleton<INotificationOrchestrator>(sp => sp.GetRequiredService<NotificationOrchestrator>());
     }
 }

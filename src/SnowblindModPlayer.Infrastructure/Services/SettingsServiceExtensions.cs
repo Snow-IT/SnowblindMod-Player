@@ -23,6 +23,7 @@ public static class SettingsServiceExtensions
     private const string SidebarCollapsedKey = "SidebarCollapsed";
     private const string LanguageModeKey = "LanguageMode";
     private const string FixedLanguageKey = "FixedLanguage";
+    private const string MinimizeToTrayOnStartupKey = "MinimizeToTrayOnStartup";
 
     public static string GetMediaFolder(this ISettingsService settings)
     {
@@ -218,5 +219,25 @@ public static class SettingsServiceExtensions
     public static void SetFixedLanguage(this ISettingsService settings, string language)
     {
         settings.Set(FixedLanguageKey, language);
+    }
+
+    public static bool GetMinimizeToTrayOnStartup(this ISettingsService settings)
+    {
+        return settings.Get(MinimizeToTrayOnStartupKey, false);
+    }
+
+    public static void SetMinimizeToTrayOnStartup(this ISettingsService settings, bool value)
+    {
+        settings.Set(MinimizeToTrayOnStartupKey, value);
+    }
+
+    public static int GetAutoplayDelaySeconds(this ISettingsService settings)
+    {
+        return settings.Get(StartDelaySecondsKey, 0);
+    }
+
+    public static void SetAutoplayDelaySeconds(this ISettingsService settings, int seconds)
+    {
+        settings.Set(StartDelaySecondsKey, Math.Max(0, seconds));
     }
 }

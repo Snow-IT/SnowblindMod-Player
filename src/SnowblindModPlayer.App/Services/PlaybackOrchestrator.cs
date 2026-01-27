@@ -1,7 +1,10 @@
 using System;
+using System.IO;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Threading;
 using SnowblindModPlayer.Core.Services;
+using SnowblindModPlayer.Infrastructure.Services;
 
 namespace SnowblindModPlayer.Services;
 
@@ -16,17 +19,20 @@ public class PlaybackOrchestrator
     private readonly IPlaybackService _playbackService;
     private readonly ISettingsService _settingsService;
     private readonly IServiceProvider _serviceProvider;
+    private readonly INotificationOrchestrator _notifier;
 
     public PlaybackOrchestrator(
         ILibraryService libraryService,
         IPlaybackService playbackService,
         ISettingsService settingsService,
-        IServiceProvider serviceProvider)
+        IServiceProvider serviceProvider,
+        INotificationOrchestrator notifier)
     {
         _libraryService = libraryService;
         _playbackService = playbackService;
         _settingsService = settingsService;
         _serviceProvider = serviceProvider;
+        _notifier = notifier;
     }
 
     /// <summary>
@@ -40,32 +46,47 @@ public class PlaybackOrchestrator
             var video = await _libraryService.GetMediaByIdAsync(videoId);
             if (video == null)
             {
-                System.Diagnostics.Debug.WriteLine($"? Video not found: {videoId}");
+                await _notifier.NotifyAsync("Video not found", NotificationScenario.PlaybackError, NotificationType.Error);
                 return;
             }
-
-            // Open PlayerWindow (activates monitor selection, settings, etc.)
-            var playerWindow = _serviceProvider.GetService(typeof(PlayerWindow)) as PlayerWindow;
-            if (playerWindow == null)
+            if (string.IsNullOrWhiteSpace(video.StoredPath) || !File.Exists(video.StoredPath))
             {
-                System.Diagnostics.Debug.WriteLine("? PlayerWindow not available");
+                await _notifier.NotifyAsync("Video file missing", NotificationScenario.PlaybackError, NotificationType.Error);
                 return;
             }
 
-            // Ensure window is shown and positioned on selected monitor (handles in Loaded event)
-            playerWindow.Show();
+            var monitorId = _settingsService.GetSelectedMonitorId();
+            if (string.IsNullOrWhiteSpace(monitorId))
+            {
+                await _notifier.NotifyAsync("No monitor selected - skipping playback", NotificationScenario.PlaybackError, NotificationType.Warning);
+                return;
+            }
 
-            // Apply all settings before playback
-            await ApplyPlaybackSettingsAsync();
+            // Marshal UI work to the dispatcher (Autoplay runs on background thread)
+            await Application.Current.Dispatcher.InvokeAsync(async () =>
+            {
+                var playerWindow = _serviceProvider.GetService(typeof(PlayerWindow)) as PlayerWindow;
+                if (playerWindow == null)
+                {
+                    await _notifier.NotifyAsync("Player window not available", NotificationScenario.PlaybackError, NotificationType.Error);
+                    return;
+                }
 
-            // Start playback
-            await _playbackService.PlayAsync(video.StoredPath);
+                // Ensure window is shown and positioned on selected monitor (handles in Loaded event)
+                playerWindow.Show();
 
-            System.Diagnostics.Debug.WriteLine($"? Playback started: {video.DisplayName}");
+                // Apply all settings before playback
+                await ApplyPlaybackSettingsAsync();
+
+                // Start playback
+                await _playbackService.PlayAsync(video.StoredPath);
+
+                System.Diagnostics.Debug.WriteLine($"? Playback started: {video.DisplayName}");
+            }, DispatcherPriority.Normal);
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"? PlayVideoAsync failed: {ex.Message}");
+            await _notifier.NotifyAsync($"Playback failed: {ex.Message}", NotificationScenario.PlaybackError, NotificationType.Error);
         }
     }
 
@@ -79,7 +100,7 @@ public class PlaybackOrchestrator
             var defaultVideo = await _libraryService.GetDefaultVideoAsync();
             if (defaultVideo == null)
             {
-                System.Diagnostics.Debug.WriteLine("? No default video set");
+                await _notifier.NotifyAsync("No default video set", NotificationScenario.PlaybackError, NotificationType.Warning);
                 return;
             }
 
@@ -87,7 +108,7 @@ public class PlaybackOrchestrator
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"? PlayDefaultVideoAsync failed: {ex.Message}");
+            await _notifier.NotifyAsync($"PlayDefault failed: {ex.Message}", NotificationScenario.PlaybackError, NotificationType.Error);
         }
     }
 

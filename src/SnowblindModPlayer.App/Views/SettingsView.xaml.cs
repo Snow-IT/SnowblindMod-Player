@@ -1,3 +1,4 @@
+using System;
 using System.Windows.Controls;
 using SnowblindModPlayer.Core.Services;
 using SnowblindModPlayer.Infrastructure.Services;
@@ -9,6 +10,7 @@ namespace SnowblindModPlayer.Views;
 public partial class SettingsView : UserControl
 {
     private readonly ISettingsService _settingsService;
+    private TextBox? _autoplayDelayTextBox;
 
     public SettingsView(MonitorSelectionViewModel monitorSelectionViewModel, ISettingsService settingsService)
     {
@@ -46,6 +48,26 @@ public partial class SettingsView : UserControl
         ScalingModeComboBox.SelectedItem = _settingsService.GetScalingMode();
         ScalingModeComboBox.SelectionChanged += ScalingModeComboBox_SelectionChanged;
 
+        MinimizeToTrayOnStartupCheckBox.IsChecked = _settingsService.GetMinimizeToTrayOnStartup();
+        MinimizeToTrayOnStartupCheckBox.Checked += (s, e) => { _settingsService.SetMinimizeToTrayOnStartup(true); _ = _settingsService.SaveAsync(); };
+        MinimizeToTrayOnStartupCheckBox.Unchecked += (s, e) => { _settingsService.SetMinimizeToTrayOnStartup(false); _ = _settingsService.SaveAsync(); };
+
+        var autoplayEnabledCheckBox = (CheckBox)FindName("AutoplayEnabledCheckBox");
+        if (autoplayEnabledCheckBox != null)
+        {
+            autoplayEnabledCheckBox.IsChecked = _settingsService.GetAutoplayEnabled();
+            autoplayEnabledCheckBox.Checked += (s, e) => { _settingsService.SetAutoplayEnabled(true); _ = _settingsService.SaveAsync(); };
+            autoplayEnabledCheckBox.Unchecked += (s, e) => { _settingsService.SetAutoplayEnabled(false); _ = _settingsService.SaveAsync(); };
+        }
+
+        var autoplayDelayTextBox = (TextBox)FindName("AutoplayDelayTextBox");
+        if (autoplayDelayTextBox != null)
+        {
+            _autoplayDelayTextBox = autoplayDelayTextBox;
+            _autoplayDelayTextBox.Text = _settingsService.GetAutoplayDelaySeconds().ToString();
+            _autoplayDelayTextBox.LostFocus += (s, e) => ApplyAutoplayDelay();
+        }
+
         _settingsService.RegisterLiveUpdate<string>("ThemePreference", pref =>
         {
             Dispatcher.Invoke(() =>
@@ -82,5 +104,23 @@ public partial class SettingsView : UserControl
         _ = _settingsService.SaveAsync();
         System.Diagnostics.Debug.WriteLine($"ThemePreference changed to {pref}");
         Dispatcher.Invoke(() => ThemeService.ApplyTheme(App.Current, ThemeService.ResolveIsLightTheme(_settingsService)));
+    }
+
+    private void ApplyAutoplayDelay()
+    {
+        if (_autoplayDelayTextBox == null)
+            return;
+
+        if (int.TryParse(_autoplayDelayTextBox.Text, out var seconds))
+        {
+            seconds = Math.Max(0, seconds);
+            _autoplayDelayTextBox.Text = seconds.ToString();
+            _settingsService.SetAutoplayDelaySeconds(seconds);
+            _ = _settingsService.SaveAsync();
+        }
+        else
+        {
+            _autoplayDelayTextBox.Text = _settingsService.GetAutoplayDelaySeconds().ToString();
+        }
     }
 }

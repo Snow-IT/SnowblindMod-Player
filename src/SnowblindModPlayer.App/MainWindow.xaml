@@ -90,7 +90,10 @@
                 </Grid.ColumnDefinitions>
 
                 <DockPanel Grid.Column="0" LastChildFill="True">
-                    <TextBlock Text="Snowblind-Mod Player" Margin="12,0,0,0" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="{DynamicResource Brush.Text}" />
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="8,0,0,0">
+                        <Image Source="pack://application:,,,/Assets/Icon.ico" Width="18" Height="18" Margin="0,0,6,0" />
+                        <TextBlock Text="Snowblind-Mod Player" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="{DynamicResource Brush.Text}" />
+                    </StackPanel>
                 </DockPanel>
 
                 <!-- Caption buttons -->
@@ -180,6 +183,30 @@
                 </StackPanel>
             </DockPanel>
         </Border>
+
+        <!-- Banner host overlay (notifications) -->
+        <ItemsControl x:Name="BannerHost"
+                      Grid.Column="1"
+                      Grid.Row="1"
+                      Width="420"
+                      HorizontalAlignment="Center"
+                      Margin="0,8,0,0"
+                      VerticalAlignment="Top"
+                      Panel.ZIndex="30">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <StackPanel Orientation="Vertical" />
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <Border Margin="0,0,0,6" Padding="12" CornerRadius="6"
+                            Background="{Binding Background}" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1">
+                        <TextBlock Text="{Binding Message}" Foreground="{DynamicResource Brush.Text}" TextWrapping="Wrap" />
+                    </Border>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
 
         <!-- Main Area -->
         <Grid Grid.Column="1">

@@ -1,15 +1,66 @@
+using System;
+using System.Collections.ObjectModel;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
+using System.Windows.Threading;
+using SnowblindModPlayer.Core.Services;
 
 namespace SnowblindModPlayer;
 
+public class BannerEntry
+{
+    public string Message { get; set; } = string.Empty;
+    public string Background { get; set; } = "#FF2D2D30";
+    public Guid Id { get; set; } = Guid.NewGuid();
+}
+
 public partial class MainWindow : Window
 {
+    private readonly ObservableCollection<BannerEntry> _banners = new();
+
     public MainWindow()
     {
         InitializeComponent();
+        // Explicitly set icon for taskbar/title
+        Icon = BitmapFrame.Create(new Uri("pack://application:,,,/Assets/Icon.ico", UriKind.Absolute));
+        BannerHost.ItemsSource = _banners;
         StateChanged += (_, _) => UpdateCaptionButtons();
         Loaded += (_, _) => UpdateCaptionButtons();
+    }
+
+    public void ShowBanner(string message, NotificationType type, int durationMs)
+    {
+        Dispatcher.Invoke(() =>
+        {
+            var entry = new BannerEntry
+            {
+                Message = message,
+                Background = type switch
+                {
+                    NotificationType.Success => "#FF1D6F42",
+                    NotificationType.Warning => "#FF8E562E",
+                    NotificationType.Error => "#FF7A1D1D",
+                    _ => "#FF2D2D30"
+                }
+            };
+            _banners.Add(entry);
+
+            // Limit to 3 visible; remove oldest if needed
+            while (_banners.Count > 3)
+            {
+                _banners.RemoveAt(0);
+            }
+
+            var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(durationMs) };
+            timer.Tick += (_, _) =>
+            {
+                timer.Stop();
+                _banners.Remove(entry);
+            };
+            timer.Start();
+        });
     }
 
     private void TitleBar_OnMouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
@@ -20,7 +71,7 @@ public partial class MainWindow : Window
             var current = d;
             while (current != null)
             {
-                if (current is System.Windows.Controls.Button)
+                if (current is Button)
                     return;
                 current = VisualTreeHelper.GetParent(current);
             }

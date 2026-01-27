@@ -48,7 +48,18 @@
                     
                     <CheckBox x:Name="LoopEnabledCheckBox" Content="Enable Loop Playback" Margin="0,0,0,10" />
                     <CheckBox x:Name="FullscreenOnStartCheckBox" Content="Start in Fullscreen" Margin="0,0,0,10" />
-                    <CheckBox x:Name="MuteOnStartupCheckBox" Content="Mute on Startup" Margin="0,0,0,16" />
+                    <CheckBox x:Name="MuteOnStartupCheckBox" Content="Mute on Startup" Margin="0,0,0,10" />
+                    <CheckBox x:Name="MinimizeToTrayOnStartupCheckBox" Content="Start minimized to tray" Margin="0,0,0,10" />
+                    <CheckBox x:Name="AutoplayEnabledCheckBox" Content="Autoplay on startup" Margin="0,0,0,10" />
+                    
+                    <Grid Margin="0,0,0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="180" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="Autoplay delay (seconds)" VerticalAlignment="Center" Foreground="{DynamicResource Brush.TextMuted}" />
+                        <TextBox Grid.Column="1" x:Name="AutoplayDelayTextBox" Width="120" HorizontalAlignment="Left" />
+                    </Grid>
                     
                     <Grid Margin="0,0,0,12">
                         <Grid.ColumnDefinitions>

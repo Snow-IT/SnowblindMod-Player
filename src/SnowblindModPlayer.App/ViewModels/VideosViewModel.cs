@@ -18,6 +18,7 @@ public class VideosViewModel : ViewModelBase
     private readonly ISettingsService _settingsService;
     private readonly IPlaybackService _playbackService;
     private readonly IServiceProvider _serviceProvider;
+    private readonly INotificationOrchestrator _notifier;
     private ObservableCollection<MediaItem> _videos = new();
     private PlayerWindow? _activePlayerWindow;
     private MediaItem? _selectedMedia;
@@ -87,13 +88,15 @@ public class VideosViewModel : ViewModelBase
         IImportService importService,
         ISettingsService settingsService,
         IPlaybackService playbackService,
-        IServiceProvider serviceProvider)
+        IServiceProvider serviceProvider,
+        INotificationOrchestrator notifier)
     {
         _libraryService = libraryService;
         _importService = importService;
         _settingsService = settingsService;
         _playbackService = playbackService;
         _serviceProvider = serviceProvider;
+        _notifier = notifier;
 
         _filteredVideos = CollectionViewSource.GetDefaultView(_videos);
         _filteredVideos.Filter = FilterVideo;
@@ -155,37 +158,22 @@ public class VideosViewModel : ViewModelBase
             if (dialog.ShowDialog() != true || dialog.FileNames.Length == 0)
                 return;
 
-            System.Diagnostics.Debug.WriteLine($"Importing {dialog.FileNames.Length} video(s)...");
-
             var importedMedia = await _importService.ImportMediaAsync(dialog.FileNames);
 
             if (importedMedia.Count > 0)
             {
-                System.Diagnostics.Debug.WriteLine($"Successfully imported {importedMedia.Count} video(s)");
                 await LoadVideosAsync();
-                MessageBox.Show(
-                    $"Successfully imported {importedMedia.Count} video(s)",
-                    "Import Complete",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Information);
+                await _notifier.NotifyAsync($"Imported {importedMedia.Count} video(s)", NotificationScenario.ImportSuccess, NotificationType.Success);
             }
             else
             {
-                MessageBox.Show(
-                    "No videos were imported. Check that files are valid and not duplicates.",
-                    "Import Failed",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                await _notifier.NotifyAsync("No videos were imported (invalid or duplicate)", NotificationScenario.ImportError, NotificationType.Warning);
             }
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"Import error: {ex.Message}");
-            MessageBox.Show(
-                $"Import failed: {ex.Message}",
-                "Error",
-                MessageBoxButton.OK,
-                MessageBoxImage.Error);
+            await _notifier.NotifyAsync($"Import failed: {ex.Message}", NotificationScenario.ImportError, NotificationType.Error);
         }
     }
 
@@ -194,33 +182,22 @@ public class VideosViewModel : ViewModelBase
         if (SelectedMedia == null)
             return;
 
-        var result = MessageBox.Show(
-            $"Are you sure you want to remove \"{SelectedMedia.DisplayName}\"?\n\nThe file will be permanently deleted.",
+        var confirm = await _notifier.ShowConfirmationAsync(
             "Confirm Removal",
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Question);
-
-        if (result != MessageBoxResult.Yes)
+            $"Are you sure you want to remove \"{SelectedMedia.DisplayName}\"?\n\nThe file will be permanently deleted.");
+        if (!confirm)
             return;
 
         try
         {
             await _libraryService.RemoveMediaAsync(SelectedMedia.Id);
             await LoadVideosAsync();
-            MessageBox.Show(
-                "Video removed successfully",
-                "Success",
-                MessageBoxButton.OK,
-                MessageBoxImage.Information);
+            await _notifier.NotifyAsync($"Removed: {SelectedMedia.DisplayName}", NotificationScenario.RemoveSuccess, NotificationType.Success);
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"Failed to remove video: {ex.Message}");
-            MessageBox.Show(
-                $"Failed to remove video: {ex.Message}",
-                "Error",
-                MessageBoxButton.OK,
-                MessageBoxImage.Error);
+            await _notifier.NotifyAsync($"Failed to remove: {ex.Message}", NotificationScenario.RemoveError, NotificationType.Error);
         }
     }
 
@@ -228,38 +205,26 @@ public class VideosViewModel : ViewModelBase
     {
         if (SelectedMedia == null)
         {
-            MessageBox.Show(
-                "Please select a video first",
-                "No Selection",
-                MessageBoxButton.OK,
-                MessageBoxImage.Warning);
+            await _notifier.NotifyAsync("Please select a video first", NotificationScenario.PlaybackError, NotificationType.Warning);
             return;
         }
 
         try
         {
             var selectedId = SelectedMedia.Id;
-            var selectedName = SelectedMedia.DisplayName; // Capture name before reload
+            var selectedName = SelectedMedia.DisplayName;
 
             await _libraryService.SetDefaultVideoAsync(selectedId);
             DefaultVideoId = selectedId;
             _ = _settingsService.SaveAsync();
             await LoadVideosAsync();
 
-            MessageBox.Show(
-                $"\"{selectedName}\" is now set as the default video",
-                "Success",
-                MessageBoxButton.OK,
-                MessageBoxImage.Information);
+            await _notifier.NotifyAsync($"Default set: {selectedName}", NotificationScenario.DefaultVideoSet, NotificationType.Success);
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"Failed to set default video: {ex.Message}");
-            MessageBox.Show(
-                $"Failed to set default video: {ex.Message}",
-                "Error",
-                MessageBoxButton.OK,
-                MessageBoxImage.Error);
+            await _notifier.NotifyAsync($"Failed to set default: {ex.Message}", NotificationScenario.PlaybackError, NotificationType.Error);
         }
     }
 
@@ -270,7 +235,6 @@ public class VideosViewModel : ViewModelBase
 
         try
         {
-            // Reuse existing PlayerWindow if open, otherwise create new
             if (_activePlayerWindow == null || !_activePlayerWindow.IsLoaded)
             {
                 var playerWindow = _serviceProvider.GetRequiredService<PlayerWindow>();
@@ -288,7 +252,7 @@ public class VideosViewModel : ViewModelBase
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"Playback error: {ex.Message}");
-            MessageBox.Show($"Failed to play video: {ex.Message}", "Playback Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            await _notifier.NotifyAsync($"Playback failed: {ex.Message}", NotificationScenario.PlaybackError, NotificationType.Error);
         }
     }
 }

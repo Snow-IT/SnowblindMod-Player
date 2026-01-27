@@ -147,16 +147,28 @@ public class LibraryService : ILibraryService
                 var media = await GetMediaByIdAsync(id);
                 if (media != null)
                 {
-                    // Delete the video file
-                    if (!string.IsNullOrEmpty(media.StoredPath) && File.Exists(media.StoredPath))
+                    try
                     {
-                        File.Delete(media.StoredPath);
+                        if (!string.IsNullOrEmpty(media.StoredPath) && File.Exists(media.StoredPath))
+                        {
+                            File.Delete(media.StoredPath);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Delete video file failed: {ex.Message}");
                     }
 
-                    // Delete the thumbnail
-                    if (!string.IsNullOrEmpty(media.ThumbnailPath) && File.Exists(media.ThumbnailPath))
+                    try
                     {
-                        File.Delete(media.ThumbnailPath);
+                        if (!string.IsNullOrEmpty(media.ThumbnailPath) && File.Exists(media.ThumbnailPath))
+                        {
+                            File.Delete(media.ThumbnailPath);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Delete thumbnail failed: {ex.Message}");
                     }
                 }
 
