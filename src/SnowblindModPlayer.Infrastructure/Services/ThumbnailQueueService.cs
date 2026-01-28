@@ -58,12 +58,7 @@ public class ThumbnailQueueService : IThumbnailQueueService
 
     private async Task ProcessQueueAsync()
     {
-        lock (_queue)
-        {
-            if (_queue.Count == 0)
-                return;
-        }
-
+        System.Diagnostics.Debug.WriteLine("?? ThumbnailQueueService.ProcessQueueAsync started");
         while (true)
         {
             (string videoPath, string outputPath, TimeSpan? duration) item;
@@ -72,7 +67,7 @@ public class ThumbnailQueueService : IThumbnailQueueService
             {
                 if (_queue.Count == 0)
                 {
-                    System.Diagnostics.Debug.WriteLine("? Thumbnail queue processing complete");
+                    System.Diagnostics.Debug.WriteLine("? Thumbnail queue empty - processing complete");
                     break;
                 }
 
@@ -82,13 +77,13 @@ public class ThumbnailQueueService : IThumbnailQueueService
             try
             {
                 Interlocked.Increment(ref _activeCount);
-                System.Diagnostics.Debug.WriteLine($"? Processing thumbnail: {item.outputPath}");
 
                 // Wait for semaphore (max 1 parallel)
                 await _semaphore.WaitAsync();
 
                 try
                 {
+                    System.Diagnostics.Debug.WriteLine($"? Processing thumbnail: {item.outputPath}");
                     // Execute with timeout and retry
                     using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(TimeoutSeconds));
 
@@ -96,12 +91,8 @@ public class ThumbnailQueueService : IThumbnailQueueService
                     {
                         try
                         {
-                            await _thumbnailService.GenerateThumbnailAsync(
-                                item.videoPath, 
-                                item.outputPath, 
-                                item.duration,
-                                cts.Token);
-                            
+                            System.Diagnostics.Debug.WriteLine($"   Attempt {attempt}/{MaxRetries}");
+                            await _thumbnailService.GenerateThumbnailAsync(item.videoPath, item.outputPath, item.duration, cts.Token);
                             System.Diagnostics.Debug.WriteLine($"? Thumbnail generated: {item.outputPath}");
                             break; // Success, exit retry loop
                         }
@@ -109,22 +100,22 @@ public class ThumbnailQueueService : IThumbnailQueueService
                         {
                             if (attempt == MaxRetries)
                             {
-                                System.Diagnostics.Debug.WriteLine($"? Thumbnail generation timeout after {MaxRetries} attempts: {item.outputPath}");
+                                System.Diagnostics.Debug.WriteLine($"??  Thumbnail timeout after {MaxRetries} attempts: {item.outputPath}");
                                 throw;
                             }
 
-                            System.Diagnostics.Debug.WriteLine($"? Thumbnail generation timeout, retrying ({attempt}/{MaxRetries}): {item.outputPath}");
+                            System.Diagnostics.Debug.WriteLine($"??  Timeout (attempt {attempt}), retrying...");
                             await Task.Delay(500); // Brief delay before retry
                         }
                         catch (Exception ex)
                         {
                             if (attempt == MaxRetries)
                             {
-                                System.Diagnostics.Debug.WriteLine($"? Thumbnail generation failed after {MaxRetries} attempts: {item.outputPath} - {ex.Message}");
+                                System.Diagnostics.Debug.WriteLine($"? Failed after {MaxRetries} attempts: {item.outputPath} - {ex.Message}");
                                 throw;
                             }
 
-                            System.Diagnostics.Debug.WriteLine($"? Thumbnail generation failed, retrying ({attempt}/{MaxRetries}): {item.outputPath} - {ex.Message}");
+                            System.Diagnostics.Debug.WriteLine($"??  Error (attempt {attempt}): {ex.Message}, retrying...");
                             await Task.Delay(500);
                         }
                     }
@@ -136,7 +127,7 @@ public class ThumbnailQueueService : IThumbnailQueueService
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"? Thumbnail queue processing failed (import continues): {item.outputPath} - {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"? Thumbnail processing failed: {item.outputPath} - {ex.Message}");
                 // Continue processing queue even on failure (import continues without thumbnail)
             }
             finally

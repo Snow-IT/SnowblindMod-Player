@@ -33,6 +33,8 @@ public class ThumbnailService : IThumbnailService
     {
         try
         {
+            System.Diagnostics.Debug.WriteLine($"?? GenerateThumbnailAsync: {Path.GetFileName(videoPath)} ? {Path.GetFileName(outputPath)}");
+            
             cancellationToken.ThrowIfCancellationRequested();
 
             if (string.IsNullOrEmpty(videoPath) || !File.Exists(videoPath))
@@ -50,35 +52,42 @@ public class ThumbnailService : IThumbnailService
             // Try VLC snapshot, fallback to placeholder
             if (_libVLC != null)
             {
+                System.Diagnostics.Debug.WriteLine($"   ?? LibVLC available, attempting VLC snapshot...");
                 if (await TryGenerateVLCSnapshotAsync(videoPath, outputPath, videoDuration, cancellationToken))
                 {
-                    System.Diagnostics.Debug.WriteLine($"VLC thumbnail generated: {outputPath}");
+                    System.Diagnostics.Debug.WriteLine($"? VLC snapshot successful: {outputPath}");
                     return outputPath;
                 }
+                System.Diagnostics.Debug.WriteLine($"? VLC snapshot failed, using placeholder");
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine($"??  LibVLC not available, using placeholder");
             }
 
             // Fallback to placeholder
             await CreatePlaceholderThumbnailAsync(outputPath);
-            System.Diagnostics.Debug.WriteLine($"Placeholder thumbnail created: {outputPath}");
+            System.Diagnostics.Debug.WriteLine($"?? Placeholder thumbnail created: {outputPath}");
             return outputPath;
         }
         catch (OperationCanceledException)
         {
-            System.Diagnostics.Debug.WriteLine($"Thumbnail generation cancelled: {outputPath}");
+            System.Diagnostics.Debug.WriteLine($"?? Thumbnail generation cancelled: {outputPath}");
             throw;
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Thumbnail generation failed, using placeholder: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"? Thumbnail generation error: {ex.Message}, creating placeholder...");
             
             try
             {
                 // Final fallback to placeholder
                 await CreatePlaceholderThumbnailAsync(outputPath);
+                System.Diagnostics.Debug.WriteLine($"?? Fallback placeholder created");
             }
             catch (Exception placeholderEx)
             {
-                System.Diagnostics.Debug.WriteLine($"Placeholder creation also failed: {placeholderEx.Message}");
+                System.Diagnostics.Debug.WriteLine($"? Placeholder creation also failed: {placeholderEx.Message}");
             }
 
             return outputPath;

@@ -380,19 +380,33 @@ public class TrayService : ITrayService
     {
         try
         {
+            System.Diagnostics.Debug.WriteLine($"?? ShowNotification called: title='{title}', message='{message}'");
+            System.Diagnostics.Debug.WriteLine($"   App visibility: MainWindow={Application.Current?.MainWindow?.IsVisible}, ShowInTaskbar={Application.Current?.MainWindow?.ShowInTaskbar}");
+            
+            // Ensure flags include NIF_INFO
             _nid.uFlags |= NIF_INFO;
             _nid.szInfo = message;
             _nid.szInfoTitle = title;
-            _nid.dwInfoFlags = NIIF_INFO;
+            _nid.dwInfoFlags = NIIF_INFO; // Use NIIF_INFO for informational icon
 
-            if (Shell_NotifyIcon(NIM_MODIFY, ref _nid))
+            System.Diagnostics.Debug.WriteLine($"   Calling Shell_NotifyIcon(NIM_MODIFY)...");
+            
+            bool success = Shell_NotifyIcon(NIM_MODIFY, ref _nid);
+            
+            if (success)
             {
-                System.Diagnostics.Debug.WriteLine($"? Notification shown: {title}");
+                System.Diagnostics.Debug.WriteLine($"? Shell_NotifyIcon succeeded - toast should appear");
+            }
+            else
+            {
+                int errorCode = Marshal.GetLastWin32Error();
+                System.Diagnostics.Debug.WriteLine($"? Shell_NotifyIcon FAILED - Win32 Error: {errorCode}");
+                System.Diagnostics.Debug.WriteLine($"   hWnd: {_nid.hWnd}, uID: {_nid.uID}, uFlags: {_nid.uFlags}");
             }
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"? Failed to show notification: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"? ShowNotification exception: {ex.Message}");
         }
     }
 

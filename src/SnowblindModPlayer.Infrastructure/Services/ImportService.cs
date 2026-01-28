@@ -108,12 +108,18 @@ public class ImportService : IImportService
                     Directory.CreateDirectory(thumbnailFolder);
                     var thumbnailPath = Path.Combine(thumbnailFolder, $"{mediaItem.Id}.jpg");
                     
+                    System.Diagnostics.Debug.WriteLine($"?? Enqueueing thumbnail for {mediaItem.DisplayName}");
+                    System.Diagnostics.Debug.WriteLine($"   Video path: {destinationPath}");
+                    System.Diagnostics.Debug.WriteLine($"   Thumbnail path: {thumbnailPath}");
+                    
                     await _thumbnailQueueService.EnqueueThumbnailAsync(destinationPath, thumbnailPath);
                     mediaItem.ThumbnailPath = thumbnailPath;
+                    
+                    System.Diagnostics.Debug.WriteLine($"? Thumbnail enqueued successfully");
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"Thumbnail queueing failed: {ex.Message}");
+                    System.Diagnostics.Debug.WriteLine($"? Thumbnail queueing failed: {ex.Message}");
                     // Continue without thumbnail - import still succeeds
                 }
 
