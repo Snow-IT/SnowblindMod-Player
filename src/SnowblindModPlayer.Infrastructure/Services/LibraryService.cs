@@ -193,6 +193,7 @@ public class LibraryService : ILibraryService
                 {
                     _settingsService.Set(DefaultVideoIdKey, string.Empty);
                     System.Diagnostics.Debug.WriteLine($"? Reset default video (was: {id})");
+                    await _settingsService.SaveAsync();
                 }
             }
 
@@ -217,6 +218,7 @@ public class LibraryService : ILibraryService
         }
 
         _settingsService.Set(DefaultVideoIdKey, videoId ?? string.Empty);
+        await _settingsService.SaveAsync();
     }
 
     public async Task<MediaItem?> GetDefaultVideoAsync()

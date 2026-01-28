@@ -11,6 +11,19 @@
     <Color x:Key="App.TextMuted">#606060</Color>
     <Color x:Key="App.Accent">#0078D4</Color>
     <Color x:Key="App.Danger">#C42B1C</Color>
+    
+    <!-- Notification colors (light theme) -->
+    <Color x:Key="App.Success">#107C10</Color>
+    <Color x:Key="App.Warning">#FFB900</Color>
+    <Color x:Key="App.Error">#E81123</Color>
+    <Color x:Key="App.Info">#0078D4</Color>
+
+    <!-- Log colors (light theme) -->
+    <Color x:Key="App.LogDebug">#5A6A76</Color>
+    <Color x:Key="App.LogInfo">#1F1F1F</Color>
+    <Color x:Key="App.LogWarn">#C07A00</Color>
+    <Color x:Key="App.LogError">#C50F1F</Color>
+    <Color x:Key="App.LogCritical">#A80000</Color>
 
     <SolidColorBrush x:Key="Brush.Bg0" Color="{StaticResource App.Bg0}" />
     <SolidColorBrush x:Key="Brush.Bg1" Color="{StaticResource App.Bg1}" />
@@ -21,5 +34,18 @@
     <SolidColorBrush x:Key="Brush.TextMuted" Color="{StaticResource App.TextMuted}" />
     <SolidColorBrush x:Key="Brush.Accent" Color="{StaticResource App.Accent}" />
     <SolidColorBrush x:Key="Brush.Danger" Color="{StaticResource App.Danger}" />
+    
+    <!-- Notification brushes -->
+    <SolidColorBrush x:Key="Brush.Success" Color="{StaticResource App.Success}" />
+    <SolidColorBrush x:Key="Brush.Warning" Color="{StaticResource App.Warning}" />
+    <SolidColorBrush x:Key="Brush.Error" Color="{StaticResource App.Error}" />
+    <SolidColorBrush x:Key="Brush.Info" Color="{StaticResource App.Info}" />
+
+    <!-- Log brushes -->
+    <SolidColorBrush x:Key="Brush.LogDebug" Color="{StaticResource App.LogDebug}" />
+    <SolidColorBrush x:Key="Brush.LogInfo" Color="{StaticResource App.LogInfo}" />
+    <SolidColorBrush x:Key="Brush.LogWarn" Color="{StaticResource App.LogWarn}" />
+    <SolidColorBrush x:Key="Brush.LogError" Color="{StaticResource App.LogError}" />
+    <SolidColorBrush x:Key="Brush.LogCritical" Color="{StaticResource App.LogCritical}" />
 
 </ResourceDictionary>

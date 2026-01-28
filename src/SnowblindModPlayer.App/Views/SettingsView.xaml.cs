@@ -10,11 +10,15 @@ namespace SnowblindModPlayer.Views;
 public partial class SettingsView : UserControl
 {
     private readonly ISettingsService _settingsService;
+    private readonly INotificationOrchestrator _notifier;
+    private readonly ILoggingService _logger;
     private TextBox? _autoplayDelayTextBox;
 
-    public SettingsView(MonitorSelectionViewModel monitorSelectionViewModel, ISettingsService settingsService)
+    public SettingsView(MonitorSelectionViewModel monitorSelectionViewModel, ISettingsService settingsService, INotificationOrchestrator notifier, ILoggingService logger)
     {
         _settingsService = settingsService;
+        _notifier = notifier;
+        _logger = logger;
 
         InitializeComponent();
         
@@ -29,16 +33,16 @@ public partial class SettingsView : UserControl
 
         // Playback settings
         LoopEnabledCheckBox.IsChecked = _settingsService.GetLoopEnabled();
-        LoopEnabledCheckBox.Checked += (s, e) => { _settingsService.SetLoopEnabled(true); _ = _settingsService.SaveAsync(); };
-        LoopEnabledCheckBox.Unchecked += (s, e) => { _settingsService.SetLoopEnabled(false); _ = _settingsService.SaveAsync(); };
+        LoopEnabledCheckBox.Checked += (s, e) => OnSettingsChanged(() => _settingsService.SetLoopEnabled(true));
+        LoopEnabledCheckBox.Unchecked += (s, e) => OnSettingsChanged(() => _settingsService.SetLoopEnabled(false));
 
         FullscreenOnStartCheckBox.IsChecked = _settingsService.GetFullscreenOnStart();
-        FullscreenOnStartCheckBox.Checked += (s, e) => { _settingsService.SetFullscreenOnStart(true); _ = _settingsService.SaveAsync(); };
-        FullscreenOnStartCheckBox.Unchecked += (s, e) => { _settingsService.SetFullscreenOnStart(false); _ = _settingsService.SaveAsync(); };
+        FullscreenOnStartCheckBox.Checked += (s, e) => OnSettingsChanged(() => _settingsService.SetFullscreenOnStart(true));
+        FullscreenOnStartCheckBox.Unchecked += (s, e) => OnSettingsChanged(() => _settingsService.SetFullscreenOnStart(false));
 
         MuteOnStartupCheckBox.IsChecked = _settingsService.GetMuted();
-        MuteOnStartupCheckBox.Checked += (s, e) => { _settingsService.SetMuted(true); _ = _settingsService.SaveAsync(); };
-        MuteOnStartupCheckBox.Unchecked += (s, e) => { _settingsService.SetMuted(false); _ = _settingsService.SaveAsync(); };
+        MuteOnStartupCheckBox.Checked += (s, e) => OnSettingsChanged(() => _settingsService.SetMuted(true));
+        MuteOnStartupCheckBox.Unchecked += (s, e) => OnSettingsChanged(() => _settingsService.SetMuted(false));
 
         VolumeSlider.Value = _settingsService.GetVolume();
         VolumeLabel.Text = $"{_settingsService.GetVolume()}%";
@@ -49,15 +53,15 @@ public partial class SettingsView : UserControl
         ScalingModeComboBox.SelectionChanged += ScalingModeComboBox_SelectionChanged;
 
         MinimizeToTrayOnStartupCheckBox.IsChecked = _settingsService.GetMinimizeToTrayOnStartup();
-        MinimizeToTrayOnStartupCheckBox.Checked += (s, e) => { _settingsService.SetMinimizeToTrayOnStartup(true); _ = _settingsService.SaveAsync(); };
-        MinimizeToTrayOnStartupCheckBox.Unchecked += (s, e) => { _settingsService.SetMinimizeToTrayOnStartup(false); _ = _settingsService.SaveAsync(); };
+        MinimizeToTrayOnStartupCheckBox.Checked += (s, e) => OnSettingsChanged(() => _settingsService.SetMinimizeToTrayOnStartup(true));
+        MinimizeToTrayOnStartupCheckBox.Unchecked += (s, e) => OnSettingsChanged(() => _settingsService.SetMinimizeToTrayOnStartup(false));
 
         var autoplayEnabledCheckBox = (CheckBox)FindName("AutoplayEnabledCheckBox");
         if (autoplayEnabledCheckBox != null)
         {
             autoplayEnabledCheckBox.IsChecked = _settingsService.GetAutoplayEnabled();
-            autoplayEnabledCheckBox.Checked += (s, e) => { _settingsService.SetAutoplayEnabled(true); _ = _settingsService.SaveAsync(); };
-            autoplayEnabledCheckBox.Unchecked += (s, e) => { _settingsService.SetAutoplayEnabled(false); _ = _settingsService.SaveAsync(); };
+            autoplayEnabledCheckBox.Checked += (s, e) => OnSettingsChanged(() => _settingsService.SetAutoplayEnabled(true));
+            autoplayEnabledCheckBox.Unchecked += (s, e) => OnSettingsChanged(() => _settingsService.SetAutoplayEnabled(false));
         }
 
         var autoplayDelayTextBox = (TextBox)FindName("AutoplayDelayTextBox");
@@ -66,6 +70,22 @@ public partial class SettingsView : UserControl
             _autoplayDelayTextBox = autoplayDelayTextBox;
             _autoplayDelayTextBox.Text = _settingsService.GetAutoplayDelaySeconds().ToString();
             _autoplayDelayTextBox.LostFocus += (s, e) => ApplyAutoplayDelay();
+        }
+
+        // Log Level
+        var logLevelComboBox = (ComboBox)FindName("LogLevelComboBox");
+        if (logLevelComboBox != null)
+        {
+            logLevelComboBox.ItemsSource = new[] { "Debug", "Information", "Warning", "Error", "Critical" };
+            logLevelComboBox.SelectedItem = _settingsService.Get("LogLevel", "Information");
+            logLevelComboBox.SelectionChanged += (s, e) =>
+            {
+                if (logLevelComboBox.SelectedItem is string level)
+                {
+                    OnSettingsChanged(() => _settingsService.Set("LogLevel", level));
+                    System.Diagnostics.Debug.WriteLine($"Log level changed to: {level}");
+                }
+            };
         }
 
         _settingsService.RegisterLiveUpdate<string>("ThemePreference", pref =>
@@ -78,20 +98,26 @@ public partial class SettingsView : UserControl
         });
     }
 
+    private void OnSettingsChanged(Action settingAction)
+    {
+        settingAction();
+        _ = _settingsService.SaveAsync();
+        _logger.Log(LogLevel.Info, "Settings", "Settings saved");
+        _ = _notifier.NotifyAsync("Settings saved", NotificationScenario.SettingsSaved, NotificationType.Info);
+    }
+
     private void VolumeSlider_ValueChanged(object sender, System.Windows.RoutedPropertyChangedEventArgs<double> e)
     {
         var vol = (int)e.NewValue;
-        _settingsService.SetVolume(vol);
+        OnSettingsChanged(() => _settingsService.SetVolume(vol));
         VolumeLabel.Text = $"{vol}%";
-        _ = _settingsService.SaveAsync();
     }
 
     private void ScalingModeComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (ScalingModeComboBox.SelectedItem is string mode)
         {
-            _settingsService.SetScalingMode(mode);
-            _ = _settingsService.SaveAsync();
+            OnSettingsChanged(() => _settingsService.SetScalingMode(mode));
         }
     }
 
@@ -103,7 +129,9 @@ public partial class SettingsView : UserControl
         _settingsService.SetThemePreference(pref);
         _ = _settingsService.SaveAsync();
         System.Diagnostics.Debug.WriteLine($"ThemePreference changed to {pref}");
+        _logger.Log(LogLevel.Info, "Settings", $"Theme changed: {pref}");
         Dispatcher.Invoke(() => ThemeService.ApplyTheme(App.Current, ThemeService.ResolveIsLightTheme(_settingsService)));
+        _ = _notifier.NotifyAsync("Settings saved", NotificationScenario.SettingsSaved, NotificationType.Info);
     }
 
     private void ApplyAutoplayDelay()
@@ -115,8 +143,7 @@ public partial class SettingsView : UserControl
         {
             seconds = Math.Max(0, seconds);
             _autoplayDelayTextBox.Text = seconds.ToString();
-            _settingsService.SetAutoplayDelaySeconds(seconds);
-            _ = _settingsService.SaveAsync();
+            OnSettingsChanged(() => _settingsService.SetAutoplayDelaySeconds(seconds));
         }
         else
         {

@@ -20,19 +20,22 @@ public class PlaybackOrchestrator
     private readonly ISettingsService _settingsService;
     private readonly IServiceProvider _serviceProvider;
     private readonly INotificationOrchestrator _notifier;
+    private readonly ILoggingService _logger;
 
     public PlaybackOrchestrator(
         ILibraryService libraryService,
         IPlaybackService playbackService,
         ISettingsService settingsService,
         IServiceProvider serviceProvider,
-        INotificationOrchestrator notifier)
+        INotificationOrchestrator notifier,
+        ILoggingService logger)
     {
         _libraryService = libraryService;
         _playbackService = playbackService;
         _settingsService = settingsService;
         _serviceProvider = serviceProvider;
         _notifier = notifier;
+        _logger = logger;
     }
 
     /// <summary>
@@ -46,26 +49,29 @@ public class PlaybackOrchestrator
             var video = await _libraryService.GetMediaByIdAsync(videoId);
             if (video == null)
             {
-                await _notifier.NotifyAsync(
-                    "Video not found in library", 
-                    NotificationScenario.PlaybackError, 
-                    NotificationType.Error);
+                _logger.Log(LogLevel.Warn, "Playback", $"Video not found: {videoId}");
+                await _notifier.NotifyErrorAsync(
+                    "Video not found in library",
+                    null,
+                    NotificationScenario.PlaybackError);
                 return;
             }
 
             // Check if file exists
             if (string.IsNullOrWhiteSpace(video.StoredPath) || !File.Exists(video.StoredPath))
             {
-                await _notifier.NotifyAsync(
-                    $"Video file not found: {video.DisplayName}", 
-                    NotificationScenario.PlaybackMissingFile, 
-                    NotificationType.Error);
+                _logger.Log(LogLevel.Warn, "Playback", $"Missing file: {video.DisplayName}");
+                await _notifier.NotifyErrorAsync(
+                    $"Video file not found: {video.DisplayName}",
+                    null,
+                    NotificationScenario.PlaybackMissingFile);
                 return;
             }
 
             var monitorId = _settingsService.GetSelectedMonitorId();
             if (string.IsNullOrWhiteSpace(monitorId))
             {
+                _logger.Log(LogLevel.Warn, "Playback", "No monitor selected - playback skipped");
                 await _notifier.NotifyAsync(
                     "No monitor selected - playback skipped", 
                     NotificationScenario.PlaybackError, 
@@ -79,10 +85,11 @@ public class PlaybackOrchestrator
                 var playerWindow = _serviceProvider.GetService(typeof(PlayerWindow)) as PlayerWindow;
                 if (playerWindow == null)
                 {
-                    await _notifier.NotifyAsync(
-                        "Player window not available", 
-                        NotificationScenario.PlaybackError, 
-                        NotificationType.Error);
+                    _logger.Log(LogLevel.Error, "Playback", "Player window not available");
+                    await _notifier.NotifyErrorAsync(
+                        "Player window not available",
+                        null,
+                        NotificationScenario.PlaybackError);
                     return;
                 }
 
@@ -96,14 +103,16 @@ public class PlaybackOrchestrator
                 await _playbackService.PlayAsync(video.StoredPath);
 
                 System.Diagnostics.Debug.WriteLine($"? Playback started: {video.DisplayName}");
+                _logger.Log(LogLevel.Info, "Playback", $"Playback started: {video.DisplayName}");
             }, DispatcherPriority.Normal);
         }
         catch (Exception ex)
         {
-            await _notifier.NotifyAsync(
-                $"Playback failed: {ex.Message}", 
-                NotificationScenario.PlaybackError, 
-                NotificationType.Error);
+            _logger.Log(LogLevel.Error, "Playback", $"Playback failed: {ex.Message}", ex);
+            await _notifier.NotifyErrorAsync(
+                $"Playback failed: {ex.Message}",
+                ex,
+                NotificationScenario.PlaybackError);
         }
     }
 
@@ -118,6 +127,7 @@ public class PlaybackOrchestrator
             var defaultVideo = await _libraryService.GetDefaultVideoAsync();
             if (defaultVideo == null)
             {
+                _logger.Log(LogLevel.Warn, "Playback", "No default video set");
                 await _notifier.NotifyAsync(
                     "No default video set", 
                     NotificationScenario.AutoplayMissingDefault, 
@@ -128,10 +138,11 @@ public class PlaybackOrchestrator
             // Validate file exists
             if (string.IsNullOrWhiteSpace(defaultVideo.StoredPath) || !File.Exists(defaultVideo.StoredPath))
             {
-                await _notifier.NotifyAsync(
-                    $"Default video file not found: {defaultVideo.DisplayName}", 
-                    NotificationScenario.PlaybackMissingFile, 
-                    NotificationType.Error);
+                _logger.Log(LogLevel.Warn, "Playback", $"Default file missing: {defaultVideo.DisplayName}");
+                await _notifier.NotifyErrorAsync(
+                    $"Default video file not found: {defaultVideo.DisplayName}",
+                    null,
+                    NotificationScenario.PlaybackMissingFile);
                 return;
             }
 
@@ -139,10 +150,11 @@ public class PlaybackOrchestrator
         }
         catch (Exception ex)
         {
-            await _notifier.NotifyAsync(
-                $"PlayDefault failed: {ex.Message}", 
-                NotificationScenario.PlaybackError, 
-                NotificationType.Error);
+            _logger.Log(LogLevel.Error, "Playback", $"PlayDefault failed: {ex.Message}", ex);
+            await _notifier.NotifyErrorAsync(
+                $"PlayDefault failed: {ex.Message}",
+                ex,
+                NotificationScenario.PlaybackError);
         }
     }
 
@@ -167,10 +179,12 @@ public class PlaybackOrchestrator
             System.Diagnostics.Debug.WriteLine($"? Loop enabled: {loopEnabled}");
 
             System.Diagnostics.Debug.WriteLine($"? Playback settings applied: Volume={volume}%, Muted={muted}, Loop={loopEnabled}");
+            _logger.Log(LogLevel.Debug, "Playback", $"Settings applied: Volume={volume} Muted={muted} Loop={loopEnabled}");
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"? Failed to apply playback settings: {ex.Message}");
+            _logger.Log(LogLevel.Error, "Playback", $"Apply settings failed: {ex.Message}", ex);
         }
     }
 }

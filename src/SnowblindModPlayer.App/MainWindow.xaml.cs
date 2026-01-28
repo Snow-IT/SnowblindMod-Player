@@ -3,6 +3,7 @@ using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using SnowblindModPlayer.Core.Services;
@@ -12,7 +13,7 @@ namespace SnowblindModPlayer;
 public class BannerEntry
 {
     public string Message { get; set; } = string.Empty;
-    public string Background { get; set; } = "#FF2D2D30";
+    public Brush Background { get; set; } = new SolidColorBrush(Color.FromRgb(45, 45, 48));
     public Guid Id { get; set; } = Guid.NewGuid();
 }
 
@@ -34,16 +35,22 @@ public partial class MainWindow : Window
     {
         Dispatcher.Invoke(() =>
         {
+            // Get theme-aware color based on type
+            var resourceKey = type switch
+            {
+                NotificationType.Success => "Brush.Success",
+                NotificationType.Warning => "Brush.Warning",
+                NotificationType.Error => "Brush.Error",
+                _ => "Brush.Info"
+            };
+
+            var backgroundBrush = Application.Current.Resources[resourceKey] as System.Windows.Media.Brush 
+                ?? new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.Gray);
+
             var entry = new BannerEntry
             {
                 Message = message,
-                Background = type switch
-                {
-                    NotificationType.Success => "#FF1D6F42",
-                    NotificationType.Warning => "#FF8E562E",
-                    NotificationType.Error => "#FF7A1D1D",
-                    _ => "#FF2D2D30"
-                }
+                Background = backgroundBrush
             };
             _banners.Add(entry);
 
@@ -53,14 +60,70 @@ public partial class MainWindow : Window
                 _banners.RemoveAt(0);
             }
 
+            // Auto-dismiss with fade-out animation
             var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(durationMs) };
             timer.Tick += (_, _) =>
             {
                 timer.Stop();
-                _banners.Remove(entry);
+                RemoveBannerWithAnimation(entry);
             };
             timer.Start();
         });
+    }
+
+    private void RemoveBannerWithAnimation(BannerEntry entry)
+    {
+        // Find the visual element (Border) for this banner
+        var container = BannerHost;
+        var itemIndex = _banners.IndexOf(entry);
+        if (itemIndex < 0) return;
+
+        // Get the UI element (ItemsControl generates Borders in ItemTemplate)
+        var ui = (UIElement?)BannerHost.ItemContainerGenerator.ContainerFromIndex(itemIndex);
+        if (ui is not Border border)
+        {
+            // Fallback: just remove
+            _banners.Remove(entry);
+            return;
+        }
+
+        // Animate fade-out + slide-up
+        var storyboard = new System.Windows.Media.Animation.Storyboard();
+
+        // Fade out animation (opacity 1 ? 0 in 300ms)
+        var fadeOut = new System.Windows.Media.Animation.DoubleAnimation
+        {
+            From = 1.0,
+            To = 0.0,
+            Duration = TimeSpan.FromMilliseconds(300),
+            EasingFunction = new System.Windows.Media.Animation.CubicEase { EasingMode = System.Windows.Media.Animation.EasingMode.EaseOut }
+        };
+        System.Windows.Media.Animation.Storyboard.SetTarget(fadeOut, border);
+        System.Windows.Media.Animation.Storyboard.SetTargetProperty(fadeOut, new PropertyPath(OpacityProperty));
+        storyboard.Children.Add(fadeOut);
+
+        // Slide-up animation (Y: 0 ? -50 in 300ms)
+        var slideUp = new System.Windows.Media.Animation.DoubleAnimation
+        {
+            From = 0.0,
+            To = -50.0,
+            Duration = TimeSpan.FromMilliseconds(300),
+            EasingFunction = new System.Windows.Media.Animation.CubicEase { EasingMode = System.Windows.Media.Animation.EasingMode.EaseOut }
+        };
+        var transform = border.RenderTransform as System.Windows.Media.TranslateTransform ?? new System.Windows.Media.TranslateTransform();
+        border.RenderTransform = transform;
+        System.Windows.Media.Animation.Storyboard.SetTarget(slideUp, border.RenderTransform);
+        System.Windows.Media.Animation.Storyboard.SetTargetProperty(slideUp, new PropertyPath(System.Windows.Media.TranslateTransform.YProperty));
+        storyboard.Children.Add(slideUp);
+
+        // On animation complete, remove from collection
+        storyboard.Completed += (s, e) =>
+        {
+            _banners.Remove(entry);
+            System.Diagnostics.Debug.WriteLine($"?? Banner animated and removed: {entry.Id}");
+        };
+
+        storyboard.Begin();
     }
 
     private void TitleBar_OnMouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)

@@ -71,13 +71,12 @@ public static class CommandBarFactory
             Margin = new Thickness(0, 0, 8, 0)
         };
 
-        var deleteBtn = new Button
+        var clearBtn = new Button
         {
             Content = new TextBlock { Text = "\uE74D", FontFamily = iconFont, FontSize = 16 },
-            ToolTip = "Delete selected log",
+            ToolTip = "Clear logs",
             Style = (Style)Application.Current.FindResource("IconButton"),
-            Margin = new Thickness(0, 0, 8, 0),
-            IsEnabled = false
+            Margin = new Thickness(0, 0, 8, 0)
         };
 
         var folderBtn = new Button
@@ -87,8 +86,17 @@ public static class CommandBarFactory
             Style = (Style)Application.Current.FindResource("IconButton")
         };
 
+
+        // Try to wire commands if ViewModel is available
+        if (view?.DataContext is SnowblindModPlayer.ViewModels.LogsViewModel vm)
+        {
+            refreshBtn.Command = vm.RefreshCommand;
+            clearBtn.Command = vm.ClearLogsCommand;
+            folderBtn.Command = vm.OpenLogsFolder;
+        }
+
         panel.Children.Add(refreshBtn);
-        panel.Children.Add(deleteBtn);
+        panel.Children.Add(clearBtn);
         panel.Children.Add(folderBtn);
 
         return panel;

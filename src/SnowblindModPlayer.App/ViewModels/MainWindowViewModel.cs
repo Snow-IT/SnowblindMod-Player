@@ -3,6 +3,7 @@ using SnowblindModPlayer.Infrastructure.Services;
 using SnowblindModPlayer.Services;
 using SnowblindModPlayer.UI.MVVM;
 using SnowblindModPlayer.Views;
+using SnowblindModPlayer.ViewModels;
 
 namespace SnowblindModPlayer.ViewModels;
 
@@ -72,13 +73,17 @@ public class MainWindowViewModel : ViewModelBase
         ISettingsService settingsService,
         VideosView videosView,
         LogsView logsView,
-        SettingsView settingsView)
+        SettingsView settingsView,
+        LogsViewModel logsViewModel)
     {
         _libraryService = libraryService;
         _settingsService = settingsService;
         _videosView = videosView;
         _logsView = logsView;
         _settingsView = settingsView;
+
+        // Wire LogsViewModel to LogsView (before binding)
+        _logsView.DataContext = logsViewModel;
 
         // Load sidebar collapsed state from settings
         _sidebarCollapsed = _settingsService.GetSidebarCollapsed();

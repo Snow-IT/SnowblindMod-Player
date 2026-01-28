@@ -6,10 +6,19 @@ namespace SnowblindModPlayer.Services;
 public class NotificationOrchestrator : INotificationOrchestrator
 {
     private readonly ITrayService _trayService;
+    private readonly ILoggingService _logger;
 
-    public NotificationOrchestrator(ITrayService trayService)
+    public NotificationOrchestrator(ITrayService trayService, ILoggingService logger)
     {
         _trayService = trayService;
+        _logger = logger;
+    }
+
+    public Task NotifyErrorAsync(string message, Exception? exception = null, NotificationScenario scenario = NotificationScenario.Generic)
+    {
+        var scenarioName = scenario.ToString();
+        _logger.Log(LogLevel.Error, "Notify", $"Error ({scenarioName}): {message}", exception);
+        return NotifyAsync(message, scenario, NotificationType.Error);
     }
 
     /// <summary>
@@ -42,11 +51,13 @@ public class NotificationOrchestrator : INotificationOrchestrator
             if (mainWindow != null && mainWindow.IsVisible)
             {
                 mainWindow.ShowBanner(message, type, durationMs);
+                _logger.Log(LogLevel.Debug, "Notify", $"Banner: {message}");
             }
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"[BANNER-ERROR] {ex.Message}");
+            _logger.Log(LogLevel.Error, "Notify", $"Banner failed: {ex.Message}", ex);
         }
         return Task.CompletedTask;
     }
@@ -72,15 +83,17 @@ public class NotificationOrchestrator : INotificationOrchestrator
     /// <summary>
     /// Show Windows native toast notification (via Tray).
     /// </summary>
-    public Task ShowTrayToastAsync(string title, string message, int durationMs = 6000)
+    public Task ShowTrayToastAsync(string title, string message, NotificationType type = NotificationType.Info, int durationMs = 6000)
     {
         try
         {
-            _trayService.ShowNotification(title, message);
+            _trayService.ShowNotification(title, message, type);
+            _logger.Log(LogLevel.Debug, "Notify", $"Toast: {title} - {message}");
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"[TOAST-ERROR] {ex.Message}");
+            _logger.Log(LogLevel.Error, "Notify", $"Toast failed: {ex.Message}", ex);
         }
         return Task.CompletedTask;
     }
@@ -92,14 +105,32 @@ public class NotificationOrchestrator : INotificationOrchestrator
     /// - Scenario context (Autoplay, Import, Playback, etc.)
     /// 
     /// Routing logic:
-    /// - If MainWindow visible + non-critical: Show Banner
-    /// - If MainWindow hidden: Show Toast (Windows native, visible even if app is tray)
-    /// - If Error: Show Dialog if visible, Toast if hidden
-    /// - Scenarios like MinimizeToTray always use Toast
+    /// - If MainWindow visible: Show Banner (non-blocking, less intrusive)
+    /// - If MainWindow hidden: Show Toast (visible even if app is tray)
+    /// - Special cases (MinimizeToTray): Always Toast
     /// </summary>
     public async Task NotifyAsync(string message, NotificationScenario scenario, NotificationType type = NotificationType.Info)
     {
         var isMainWindowVisible = IsMainWindowVisible();
+        _logger.Log(LogLevel.Debug, "Notify", $"Notify: scenario={scenario} type={type} visible={isMainWindowVisible}");
+
+        // Fallback for unknown/unhandled errors
+        if (scenario == NotificationScenario.Generic && type == NotificationType.Error)
+        {
+            var errorCode = Guid.NewGuid().ToString("N")[..8].ToUpperInvariant();
+            var fallbackMessage = $"Unexpected error occurred (Code: {errorCode})";
+            _logger.Log(LogLevel.Error, "Notify", $"Generic error [{errorCode}]: {message}");
+
+            if (isMainWindowVisible)
+            {
+                await ShowBannerAsync(fallbackMessage, NotificationType.Error);
+            }
+            else
+            {
+                await ShowTrayToastAsync("Error", fallbackMessage, NotificationType.Error);
+            }
+            return;
+        }
 
         // Special case: MinimizeToTray always uses Toast
         if (scenario == NotificationScenario.MinimizeToTray)
@@ -108,44 +139,16 @@ public class NotificationOrchestrator : INotificationOrchestrator
             return;
         }
 
-        // Error scenarios: Dialog if visible, Toast if hidden
-        if (type == NotificationType.Error)
-        {
-            if (isMainWindowVisible)
-            {
-                await ShowErrorAsync("Error", message);
-            }
-            else
-            {
-                // Toast for errors when app is minimized/tray (e.g., playback error, missing file)
-                await ShowTrayToastAsync("Error", message);
-            }
-            return;
-        }
-
-        // Playback-related errors should always show Toast if app is not visible
-        // (ensures user sees "file missing" even if app is in tray)
-        if (scenario == NotificationScenario.PlaybackError)
-        {
-            if (isMainWindowVisible)
-            {
-                await ShowBannerAsync(message, type, 5000);
-            }
-            else
-            {
-                await ShowTrayToastAsync("SnowblindMod-Player", message);
-            }
-            return;
-        }
-
-        // Default: Banner if visible, Toast if hidden
+        // Main routing: Banner if window visible, Toast if hidden
         if (isMainWindowVisible)
         {
-            await ShowBannerAsync(message, type, 5000);
+            // Show banner for all types when window is visible
+            await ShowBannerAsync(message, type);
         }
         else
         {
-            await ShowTrayToastAsync("SnowblindMod-Player", message);
+            // Show toast when app is minimized/in tray (pass notification type)
+            await ShowTrayToastAsync("Notification", message, type);
         }
     }
 }

@@ -61,6 +61,15 @@
                 </Setter.Value>
             </Setter>
         </Style>
+
+        <!-- Banner Item Style with animations -->
+        <Style x:Key="BannerItemStyle" TargetType="Border">
+            <Setter Property="RenderTransform">
+                <Setter.Value>
+                    <TranslateTransform Y="0" />
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
 
     <Grid>
@@ -203,7 +212,8 @@
             <ItemsControl.ItemTemplate>
                 <DataTemplate>
                     <Border Margin="0,0,0,6" Padding="12" CornerRadius="6"
-                            Background="{Binding Background}" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1">
+                            Background="{Binding Background}" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1"
+                            Style="{StaticResource BannerItemStyle}">
                         <TextBlock Text="{Binding Message}" Foreground="{DynamicResource Brush.Text}" TextWrapping="Wrap" />
                     </Border>
                 </DataTemplate>

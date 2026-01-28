@@ -5,23 +5,21 @@ using System.Windows;
 using Microsoft.Win32;
 using SnowblindModPlayer.Core.Services;
 using SnowblindModPlayer.Infrastructure.Services;
+using SnowblindModPlayer.Services;
 using SnowblindModPlayer.UI.MVVM;
 using SnowblindModPlayer.UI.ViewModels;
-using Microsoft.Extensions.DependencyInjection;
-using System.IO;
 
 namespace SnowblindModPlayer.ViewModels;
 
 public class VideosViewModel : ViewModelBase
 {
     private readonly ILibraryService _libraryService;
-    private readonly IImportService _importService;
+    private readonly ILibraryOrchestrator _libraryOrchestrator;
+    private readonly ILibraryChangeNotifier _changeNotifier;
     private readonly ISettingsService _settingsService;
-    private readonly IPlaybackService _playbackService;
-    private readonly IServiceProvider _serviceProvider;
+    private readonly PlaybackOrchestrator _playbackOrchestrator;
     private readonly INotificationOrchestrator _notifier;
     private ObservableCollection<MediaItem> _videos = new();
-    private PlayerWindow? _activePlayerWindow;
     private MediaItem? _selectedMedia;
     private readonly ICollectionView _filteredVideos;
     private string _searchText = string.Empty;
@@ -86,17 +84,17 @@ public class VideosViewModel : ViewModelBase
 
     public VideosViewModel(
         ILibraryService libraryService,
-        IImportService importService,
+        ILibraryOrchestrator libraryOrchestrator,
+        ILibraryChangeNotifier changeNotifier,
         ISettingsService settingsService,
-        IPlaybackService playbackService,
-        IServiceProvider serviceProvider,
+        PlaybackOrchestrator playbackOrchestrator,
         INotificationOrchestrator notifier)
     {
         _libraryService = libraryService;
-        _importService = importService;
+        _libraryOrchestrator = libraryOrchestrator;
+        _changeNotifier = changeNotifier;
         _settingsService = settingsService;
-        _playbackService = playbackService;
-        _serviceProvider = serviceProvider;
+        _playbackOrchestrator = playbackOrchestrator;
         _notifier = notifier;
 
         _filteredVideos = CollectionViewSource.GetDefaultView(_videos);
@@ -108,6 +106,11 @@ public class VideosViewModel : ViewModelBase
         RemoveCommand = new RelayCommand(_ => RemoveSelectedAsync());
         SetDefaultCommand = new RelayCommand(_ => SetAsDefaultAsync());
         PlaySelectedCommand = new RelayCommand(_ => PlaySelectedAsync());
+
+        // Subscribe to library change notifier events (auto-reload on changes)
+        _changeNotifier.VideoImported += (s, e) => _ = OnLibraryChangedAsync();
+        _changeNotifier.VideoRemoved += (s, e) => _ = OnLibraryChangedAsync();
+        _changeNotifier.DefaultVideoChanged += (s, e) => _ = OnLibraryChangedAsync();
     }
 
     private bool FilterVideo(object obj)
@@ -145,6 +148,15 @@ public class VideosViewModel : ViewModelBase
         }
     }
 
+    /// <summary>
+    /// Auto-reload videos when library changes (via LibraryOrchestrator events)
+    /// </summary>
+    private async Task OnLibraryChangedAsync()
+    {
+        System.Diagnostics.Debug.WriteLine("?? Library changed, reloading videos...");
+        await LoadVideosAsync();
+    }
+
     private async void ImportVideosAsync()
     {
         try
@@ -159,22 +171,13 @@ public class VideosViewModel : ViewModelBase
             if (dialog.ShowDialog() != true || dialog.FileNames.Length == 0)
                 return;
 
-            var importedMedia = await _importService.ImportMediaAsync(dialog.FileNames);
-
-            if (importedMedia.Count > 0)
-            {
-                await LoadVideosAsync();
-                await _notifier.NotifyAsync($"Imported {importedMedia.Count} video(s)", NotificationScenario.ImportSuccess, NotificationType.Success);
-            }
-            else
-            {
-                await _notifier.NotifyAsync("No videos were imported (invalid or duplicate)", NotificationScenario.ImportError, NotificationType.Warning);
-            }
+            // Delegate to LibraryOrchestrator (handles Import + Events + Notifications)
+            await _libraryOrchestrator.ImportVideosAsync(dialog.FileNames);
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"Import error: {ex.Message}");
-            await _notifier.NotifyAsync($"Import failed: {ex.Message}", NotificationScenario.ImportError, NotificationType.Error);
+            await _notifier.NotifyErrorAsync($"Import failed: {ex.Message}", ex, NotificationScenario.ImportError);
         }
     }
 
@@ -192,21 +195,11 @@ public class VideosViewModel : ViewModelBase
         if (!confirm)
             return;
 
-        try
-        {
-            await _libraryService.RemoveMediaAsync(mediaToRemove.Id);
-            
-            // Clear selection BEFORE reloading videos
-            SelectedMedia = null;
-            
-            await LoadVideosAsync();
-            await _notifier.NotifyAsync($"Removed: {mediaToRemove.DisplayName}", NotificationScenario.RemoveSuccess, NotificationType.Success);
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"Failed to remove video: {ex.Message}");
-            await _notifier.NotifyAsync($"Failed to remove: {ex.Message}", NotificationScenario.RemoveError, NotificationType.Error);
-        }
+        // Delegate to LibraryOrchestrator (handles Remove + Events + Notifications)
+        await _libraryOrchestrator.RemoveVideoAsync(mediaToRemove.Id);
+        
+        // Clear selection BEFORE reloading videos
+        SelectedMedia = null;
     }
 
     private async Task SetAsDefaultAsync()
@@ -217,63 +210,26 @@ public class VideosViewModel : ViewModelBase
             return;
         }
 
-        try
-        {
-            var selectedId = SelectedMedia.Id;
-            var selectedName = SelectedMedia.DisplayName;
+        var selectedId = SelectedMedia.Id;
+        var selectedName = SelectedMedia.DisplayName;
 
-            await _libraryService.SetDefaultVideoAsync(selectedId);
-            DefaultVideoId = selectedId;
-            _ = _settingsService.SaveAsync();
-            await LoadVideosAsync();
-
-            await _notifier.NotifyAsync($"Default set: {selectedName}", NotificationScenario.DefaultVideoSet, NotificationType.Success);
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"Failed to set default video: {ex.Message}");
-            await _notifier.NotifyAsync($"Failed to set default: {ex.Message}", NotificationScenario.PlaybackError, NotificationType.Error);
-        }
+        // Delegate to LibraryOrchestrator (handles SetDefault + Events + Notifications)
+        await _libraryOrchestrator.SetDefaultVideoAsync(selectedId);
     }
 
     private async void PlaySelectedAsync()
     {
-        if (SelectedMedia == null)
+        if (SelectedMedia == null || string.IsNullOrEmpty(SelectedMedia.StoredPath))
             return;
-
-        // Validate file exists before trying to play
-        if (string.IsNullOrEmpty(SelectedMedia.StoredPath) || !File.Exists(SelectedMedia.StoredPath))
-        {
-            await _notifier.NotifyAsync(
-                $"Video file not found: {SelectedMedia.DisplayName}", 
-                NotificationScenario.PlaybackMissingFile, 
-                NotificationType.Error);
-            return;
-        }
 
         try
         {
-            if (_activePlayerWindow == null || !_activePlayerWindow.IsLoaded)
-            {
-                var playerWindow = _serviceProvider.GetRequiredService<PlayerWindow>();
-                var vm = _serviceProvider.GetRequiredService<PlayerWindowViewModel>();
-                playerWindow.DataContext = vm;
-                playerWindow.Closed += (s, e) => _activePlayerWindow = null;
-                _activePlayerWindow = playerWindow;
-                playerWindow.Show();
-            }
-
-            _activePlayerWindow.Activate();
-            _activePlayerWindow.Focus();
-            await _activePlayerWindow.LoadVideoAsync(SelectedMedia.StoredPath);
+            await _playbackOrchestrator.PlayVideoAsync(SelectedMedia.Id);
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"Playback error: {ex.Message}");
-            await _notifier.NotifyAsync(
-                $"Playback failed: {ex.Message}", 
-                NotificationScenario.PlaybackError, 
-                NotificationType.Error);
+            await _notifier.NotifyErrorAsync($"Playback failed: {ex.Message}", ex, NotificationScenario.PlaybackError);
         }
     }
 }

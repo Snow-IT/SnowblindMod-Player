@@ -8,6 +8,8 @@ public class MonitorSelectionViewModel : ViewModelBase
 {
     private readonly IMonitorService _monitorService;
     private readonly ISettingsService _settingsService;
+    private readonly INotificationOrchestrator _notifier;
+    private readonly ILoggingService _logger;
     private ObservableCollection<MonitorInfo> _availableMonitors = new();
     private MonitorInfo? _selectedMonitor;
 
@@ -28,16 +30,28 @@ public class MonitorSelectionViewModel : ViewModelBase
                 _monitorService.SelectMonitor(value.Id);
                 // Persist to disk immediately
                 _ = _settingsService.SaveAsync();
+                
+                // Notify user
+                _ = _notifier.NotifyAsync(
+                    $"Display set to: {value.DisplayName}",
+                    NotificationScenario.SettingsSaved,
+                    NotificationType.Info);
             }
         }
     }
 
     public RelayCommand<MonitorInfo> SelectMonitorCommand { get; }
 
-    public MonitorSelectionViewModel(IMonitorService monitorService, ISettingsService settingsService)
+    public MonitorSelectionViewModel(
+        IMonitorService monitorService, 
+        ISettingsService settingsService,
+        INotificationOrchestrator notifier,
+        ILoggingService logger)
     {
         _monitorService = monitorService;
         _settingsService = settingsService;
+        _notifier = notifier;
+        _logger = logger;
         SelectMonitorCommand = new RelayCommand<MonitorInfo>(SelectMonitorExecute);
         LoadMonitors();
     }

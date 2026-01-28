@@ -110,6 +110,28 @@
                 </StackPanel>
             </Border>
 
+            <Border Background="{DynamicResource Brush.Panel}" 
+                    BorderBrush="{DynamicResource Brush.Border}" 
+                    BorderThickness="1" 
+                    CornerRadius="8" 
+                    Padding="20" 
+                    Margin="0,0,0,16">
+                <StackPanel>
+                    <TextBlock Text="Logging" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,12" />
+                    
+                    <Grid Margin="0,0,0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="180" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="Log Level" VerticalAlignment="Center" Foreground="{DynamicResource Brush.TextMuted}" />
+                        <ComboBox Grid.Column="1" x:Name="LogLevelComboBox" Width="200" HorizontalAlignment="Left" />
+                    </Grid>
+                    
+                    <TextBlock Text="Changes take effect immediately" FontSize="11" Foreground="{DynamicResource Brush.TextMuted}" FontStyle="Italic" />
+                </StackPanel>
+            </Border>
+
         </StackPanel>
     </ScrollViewer>
 </UserControl>

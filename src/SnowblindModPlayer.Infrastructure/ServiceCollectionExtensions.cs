@@ -23,11 +23,15 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton<ILibraryService, LibraryService>();
         services.AddSingleton<IThumbnailService, ThumbnailService>();  // Use LibVLC-based implementation
+        services.AddSingleton<ILibraryChangeNotifier, LibraryChangeNotifier>();
         services.AddSingleton<IThumbnailQueueService, ThumbnailQueueService>();
         services.AddSingleton<IImportService, ImportService>();
         services.AddSingleton<ILoggingService, LoggingService>();
         services.AddSingleton<IMonitorService, MonitorService>();
         services.AddSingleton<IPlaybackService, PlaybackService>();
+        
+        // Library orchestrator (unified entry point for Import/Remove/SetDefault + events)
+        services.AddSingleton<ILibraryOrchestrator, LibraryOrchestrator>();
 
         return services;
     }

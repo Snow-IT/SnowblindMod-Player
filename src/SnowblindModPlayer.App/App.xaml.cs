@@ -1,5 +1,8 @@
+using System;
 using System.Windows;
+using System.Windows.Controls;
 using Microsoft.Extensions.DependencyInjection;
+using Serilog;
 using SnowblindModPlayer.Core.Services;
 using SnowblindModPlayer.Infrastructure;
 using SnowblindModPlayer.Infrastructure.Services;
@@ -8,140 +11,179 @@ using SnowblindModPlayer.UI.ViewModels;
 using SnowblindModPlayer.ViewModels;
 using SnowblindModPlayer.Views;
 
-namespace SnowblindModPlayer;
-
-public partial class App : Application
+namespace SnowblindModPlayer
 {
-    private ServiceProvider? _serviceProvider;
-    private ITrayService? _trayService;
-    private ISingleInstanceService? _singleInstanceService;
-    private MainWindow? _mainWindow;
-    private bool _shutdownRequested;
-
-    protected override void OnStartup(StartupEventArgs e)
+    public partial class App : Application
     {
-        // Register exception handlers FIRST, before anything else
-        DispatcherUnhandledException += (s, args) =>
+        private ServiceProvider? _serviceProvider;
+        private ITrayService? _trayService;
+        private ISingleInstanceService? _singleInstanceService;
+        private MainWindow? _mainWindow;
+        private bool _shutdownRequested;
+
+        protected override void OnStartup(StartupEventArgs e)
         {
-            System.Diagnostics.Debug.WriteLine($"? UNHANDLED EXCEPTION: {args.Exception}");
-            args.Handled = true;
-            Shutdown(1);
-        };
-        AppDomain.CurrentDomain.UnhandledException += (s, args) =>
-        {
-            System.Diagnostics.Debug.WriteLine($"? UNHANDLED APPDOMAIN EXCEPTION: {args.ExceptionObject}");
-            Shutdown(1);
-        };
-        
-        base.OnStartup(e);
+            base.OnStartup(e);
 
-        // Show startup window
-        var startupWindow = new StartupWindow();
-        startupWindow.Show();
-
-        try
-        {
-            System.Diagnostics.Debug.WriteLine("=== App Startup Started ===");
-
-            // Build DI container
-            System.Diagnostics.Debug.WriteLine("Building DI container...");
-            var services = new ServiceCollection();
-            ConfigureServices(services);
-            _serviceProvider = services.BuildServiceProvider();
-            System.Diagnostics.Debug.WriteLine("? DI container built");
-
-            // Single instance guard
-            var singleInstance = _serviceProvider.GetRequiredService<ISingleInstanceService>();
-            _singleInstanceService = singleInstance;
-            System.Diagnostics.Debug.WriteLine("? Attempting to acquire primary instance...");
-            if (!singleInstance.TryAcquirePrimary())
+            try
             {
-                System.Diagnostics.Debug.WriteLine("? Another instance detected, notifying primary and exiting");
-                singleInstance.NotifyPrimaryInstance();
-                Shutdown();
-                return;
-            }
-            System.Diagnostics.Debug.WriteLine("? Primary instance acquired");
-            _singleInstanceService.StartListening(() => Dispatcher.Invoke(ShowMainWindowFromTray));
+                // ===== FIRST: Initialize Serilog (global logger) =====
+            var appDataPath = System.IO.Path.Combine(
+                System.Environment.GetFolderPath(System.Environment.SpecialFolder.ApplicationData),
+                "SnowblindModPlayer");
+            var logsPath = System.IO.Path.Combine(appDataPath, "Logs");
+                System.IO.Directory.CreateDirectory(logsPath);
 
-            // Initialize AppData paths
-            System.Diagnostics.Debug.WriteLine("Initializing AppData paths...");
-            var pathService = _serviceProvider.GetRequiredService<IAppDataPathService>();
-            pathService.EnsureDirectoriesExist();
-            System.Diagnostics.Debug.WriteLine("? AppData paths initialized");
+            Log.Logger = new LoggerConfiguration()
+                .MinimumLevel.Debug()
+                .WriteTo.File(
+                    path: System.IO.Path.Combine(logsPath, $"{System.DateTime.Today:yyyy-MM-dd}.log"),
+                    outputTemplate: "{Timestamp:HH:mm:ss.fff} [{Level:u3}] {Message:lj}{NewLine}{Exception}",
+                    rollingInterval: RollingInterval.Infinite,
+                    retainedFileCountLimit: 30,
+                    shared: true,
+                    buffered: false,
+                    flushToDiskInterval: System.TimeSpan.FromSeconds(1))
+                .CreateLogger();
 
-            // Initialize database and run migrations
-            System.Diagnostics.Debug.WriteLine("Initializing database...");
-            _serviceProvider.InitializeDatabaseAsync().GetAwaiter().GetResult();
-            System.Diagnostics.Debug.WriteLine("? Database initialized");
+            Log.Debug("=== APPLICATION STARTUP ===");
+            Log.Debug("Log path: {LogPath}", logsPath);
+                System.Diagnostics.Debug.WriteLine("? Serilog initialized");
 
-            var settingsService = _serviceProvider.GetRequiredService<ISettingsService>();
-
-            // Load settings async without blocking UI thread
-            _ = Task.Run(async () =>
-            {
-                try
+                // Register exception handlers AFTER Serilog is ready
+                DispatcherUnhandledException += (s, args) =>
                 {
-                    System.Diagnostics.Debug.WriteLine("Loading settings...");
-                    await settingsService.LoadAsync();
-                    System.Diagnostics.Debug.WriteLine("? Settings loaded");
+                Log.Fatal(args.Exception, "UNHANDLED EXCEPTION");
+                    System.Diagnostics.Debug.WriteLine($"? UNHANDLED EXCEPTION: {args.Exception}");
+                    args.Handled = true;
+                    Shutdown(1);
+                };
+                AppDomain.CurrentDomain.UnhandledException += (s, args) =>
+                {
+                Log.Fatal((Exception?)args.ExceptionObject, "UNHANDLED APPDOMAIN EXCEPTION");
+                    System.Diagnostics.Debug.WriteLine($"? UNHANDLED APPDOMAIN EXCEPTION: {args.ExceptionObject}");
+                    Shutdown(1);
+                };
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"? Serilog initialization failed: {ex.Message}");
+                MessageBox.Show($"Logging initialization failed:\n\n{ex.Message}", "Fatal Error");
+                Shutdown(1);
+            }
 
-                    // Apply theme and create main window on UI thread
-                    await Dispatcher.InvokeAsync(() =>
+            // Show startup window
+            var startupWindow = new StartupWindow();
+            startupWindow.Show();
+
+            try
+            {
+                System.Diagnostics.Debug.WriteLine("=== App Startup Started ===");
+
+                // Build DI container
+                System.Diagnostics.Debug.WriteLine("Building DI container...");
+                var services = new ServiceCollection();
+                ConfigureServices(services);
+                _serviceProvider = services.BuildServiceProvider();
+                System.Diagnostics.Debug.WriteLine("? DI container built");
+                Log.Debug("DI container built");
+
+                // Single instance guard
+                var singleInstance = _serviceProvider.GetRequiredService<ISingleInstanceService>();
+                _singleInstanceService = singleInstance;
+                System.Diagnostics.Debug.WriteLine("? Attempting to acquire primary instance...");
+                if (!singleInstance.TryAcquirePrimary())
+                {
+                    System.Diagnostics.Debug.WriteLine("? Another instance detected, notifying primary and exiting");
+                Log.Information("Secondary instance detected; notifying primary and exiting");
+                    singleInstance.NotifyPrimaryInstance();
+                    Shutdown();
+                    return;
+                }
+                System.Diagnostics.Debug.WriteLine("? Primary instance acquired");
+                Log.Debug("Primary instance acquired");
+                _singleInstanceService.StartListening(() => Dispatcher.Invoke(ShowMainWindowFromTray));
+
+                // Initialize AppData paths
+                System.Diagnostics.Debug.WriteLine("Initializing AppData paths...");
+                var pathService = _serviceProvider.GetRequiredService<IAppDataPathService>();
+                pathService.EnsureDirectoriesExist();
+                System.Diagnostics.Debug.WriteLine("? AppData paths initialized");
+                Log.Debug("AppData paths initialized");
+
+                // Initialize database and run migrations
+                System.Diagnostics.Debug.WriteLine("Initializing database...");
+                _serviceProvider.InitializeDatabaseAsync().GetAwaiter().GetResult();
+                System.Diagnostics.Debug.WriteLine("? Database initialized");
+                Log.Debug("Database initialized");
+
+                var settingsService = _serviceProvider.GetRequiredService<ISettingsService>();
+
+                // Load settings async without blocking UI thread
+                _ = Task.Run(async () =>
+                {
+                    try
                     {
-                        try
+                        System.Diagnostics.Debug.WriteLine("Loading settings...");
+                        await settingsService.LoadAsync();
+                        System.Diagnostics.Debug.WriteLine("? Settings loaded");
+
+                        // Apply theme and create main window on UI thread
+                        await Dispatcher.InvokeAsync(() =>
                         {
-                            System.Diagnostics.Debug.WriteLine("Applying theme...");
-                            ThemeService.ApplyTheme(this, ThemeService.ResolveIsLightTheme(settingsService));
-                            System.Diagnostics.Debug.WriteLine("? Theme applied");
+                            try
+                            {
+                                System.Diagnostics.Debug.WriteLine("Applying theme...");
+                                ThemeService.ApplyTheme(this, ThemeService.ResolveIsLightTheme(settingsService));
+                                System.Diagnostics.Debug.WriteLine("? Theme applied");
 
-                            System.Diagnostics.Debug.WriteLine("Creating main window...");
-                            _mainWindow = _serviceProvider.GetRequiredService<MainWindow>();
-                            var viewModel = _serviceProvider.GetRequiredService<SnowblindModPlayer.ViewModels.MainWindowViewModel>();
-                            _mainWindow.DataContext = viewModel;
+                                System.Diagnostics.Debug.WriteLine("Creating main window...");
+                                _mainWindow = _serviceProvider.GetRequiredService<MainWindow>();
+                                var viewModel = _serviceProvider.GetRequiredService<SnowblindModPlayer.ViewModels.MainWindowViewModel>();
+                                _mainWindow.DataContext = viewModel;
 
-                            // Initialize tray with full menu support
-                            _trayService = _serviceProvider.GetRequiredService<ITrayService>();
-                            var playbackOrchestrator = _serviceProvider.GetRequiredService<PlaybackOrchestrator>();
-                            var libraryService = _serviceProvider.GetRequiredService<ILibraryService>();
-                            
-                            _trayService.Initialize(
-                                onShowRequested: ShowMainWindowFromTray,
-                                onExitRequested: ExitFromTray,
-                                onPlayDefaultRequested: playbackOrchestrator.PlayDefaultVideoAsync,
-                                onPlayVideoRequested: playbackOrchestrator.PlayVideoAsync,
-                                onStopRequested: async () =>
-                                {
-                                    var playbackService = _serviceProvider.GetRequiredService<IPlaybackService>();
-                                    await playbackService.StopAsync();
-                                    System.Diagnostics.Debug.WriteLine("? Playback stopped from tray");
-                                },
-                                getVideosForMenu: async () =>
-                                {
-                                    try
+                                // Initialize tray with full menu support
+                                _trayService = _serviceProvider.GetRequiredService<ITrayService>();
+                                var playbackOrchestrator = _serviceProvider.GetRequiredService<PlaybackOrchestrator>();
+                                var libraryService = _serviceProvider.GetRequiredService<ILibraryService>();
+                                
+                                _trayService.Initialize(
+                                    onShowRequested: ShowMainWindowFromTray,
+                                    onExitRequested: ExitFromTray,
+                                    onPlayDefaultRequested: playbackOrchestrator.PlayDefaultVideoAsync,
+                                    onPlayVideoRequested: playbackOrchestrator.PlayVideoAsync,
+                                    onStopRequested: async () =>
                                     {
-                                        var allVideos = await libraryService.GetAllMediaAsync();
-                                        var defaultVideo = await libraryService.GetDefaultVideoAsync();
-
-                                        var videos = allVideos
-                                            .Select(m => new VideoItem
-                                            {
-                                                Id = m.Id,
-                                                DisplayName = m.DisplayName,
-                                                IsDefault = defaultVideo != null && m.Id == defaultVideo.Id
-                                            })
-                                            .OrderBy(v => v.IsDefault ? 0 : 1)
-                                            .ThenBy(v => v.DisplayName)
-                                            .ToList();
-
-                                        return videos;
-                                    }
-                                    catch (Exception ex)
+                                        var playbackService = _serviceProvider.GetRequiredService<IPlaybackService>();
+                                        await playbackService.StopAsync();
+                                        System.Diagnostics.Debug.WriteLine("? Playback stopped from tray");
+                                    },
+                                    getVideosForMenu: async () =>
                                     {
-                                        System.Diagnostics.Debug.WriteLine($"? Error fetching videos for tray menu: {ex.Message}");
-                                        return new List<VideoItem>();
-                                    }
-                                });
+                                        try
+                                        {
+                                            var allVideos = await libraryService.GetAllMediaAsync();
+                                            var defaultVideo = await libraryService.GetDefaultVideoAsync();
+
+                                            var videos = allVideos
+                                                .Select(m => new VideoItem
+                                                {
+                                                    Id = m.Id,
+                                                    DisplayName = m.DisplayName,
+                                                    IsDefault = defaultVideo != null && m.Id == defaultVideo.Id
+                                                })
+                                                .OrderBy(v => v.IsDefault ? 0 : 1)
+                                                .ThenBy(v => v.DisplayName)
+                                                .ToList();
+
+                                            return videos;
+                                        }
+                                        catch (Exception ex)
+                                        {
+                                            System.Diagnostics.Debug.WriteLine($"? Error fetching videos for tray menu: {ex.Message}");
+                                            return new List<VideoItem>();
+                                        }
+                                    });
 
                             // Close-to-tray handling
                             _mainWindow.Closing += MainWindow_Closing;
@@ -158,6 +200,7 @@ public partial class App : Application
                                 _mainWindow.Show(); // required for message loop
                                 _mainWindow.Visibility = System.Windows.Visibility.Hidden;
                                 System.Diagnostics.Debug.WriteLine("? Main window initialized hidden for tray mode");
+                                Log.Debug("Startup: minimized to tray");
                             }
                             else
                             {
@@ -168,6 +211,7 @@ public partial class App : Application
                                 _mainWindow.Show();
                                 _mainWindow.Visibility = System.Windows.Visibility.Visible;
                                 System.Diagnostics.Debug.WriteLine("? Main window initialized visible");
+                                Log.Debug("Startup: main window visible");
                             }
 
                             // Autoplay on startup (SPEC 2.6: Autoplay with startup delay)
@@ -184,6 +228,7 @@ public partial class App : Application
                                         if (autoplayDelayMs > 0)
                                         {
                                             System.Diagnostics.Debug.WriteLine($"? Autoplay delayed by {autoplayDelayMs}ms");
+                                            Log.Debug("Autoplay delayed {DelayMs}ms", autoplayDelayMs);
                                             await Task.Delay(autoplayDelayMs);
                                         }
                                         
@@ -223,6 +268,17 @@ public partial class App : Application
 
                                         System.Diagnostics.Debug.WriteLine("? Autoplay: Starting default video");
                                         await playbackOrchestrator.PlayDefaultVideoAsync();
+                                        
+                                        // Notify user that autoplay started
+                                        await Dispatcher.InvokeAsync(async () =>
+                                        {
+                                            var notifier = _serviceProvider!.GetRequiredService<INotificationOrchestrator>();
+                                            await notifier.NotifyAsync(
+                                                $"Playing: {defaultVideo.DisplayName}",
+                                                NotificationScenario.AutoplayStarted,
+                                                NotificationType.Info);
+                                        });
+
                                     }
                                     catch (Exception ex)
                                     {
@@ -300,12 +356,14 @@ public partial class App : Application
                                 _mainWindow.ShowInTaskbar = false;
                                 _mainWindow.Show();
                                 _mainWindow.Visibility = System.Windows.Visibility.Hidden;
+                                Log.Debug("Startup: minimized to tray (fallback)");
                             }
                             else
                             {
                                 _mainWindow.ShowInTaskbar = true;
                                 _mainWindow.Show();
                                 _mainWindow.Visibility = System.Windows.Visibility.Visible;
+                                Log.Debug("Startup: main window visible (fallback)");
                             }
                             
                              var autoplayEnabled = settingsService.GetAutoplayEnabled();
@@ -352,6 +410,7 @@ public partial class App : Application
                                          }
 
                                          System.Diagnostics.Debug.WriteLine("? Autoplay: Starting default video");
+                                        Log.Information("Autoplay started");
                                          await playbackOrchestrator.PlayDefaultVideoAsync();
                                      }
                                      catch (Exception ex)
@@ -390,10 +449,31 @@ public partial class App : Application
         // Close-to-tray: cancel closing and hide window
         e.Cancel = true;
         _trayService?.SetMainWindowVisible(false);
+        
+        // Notify user that app is minimized to tray
+        _ = Dispatcher.InvokeAsync(async () =>
+        {
+            try
+            {
+                var notifier = _serviceProvider?.GetRequiredService<INotificationOrchestrator>();
+                if (notifier != null)
+                {
+                    await notifier.NotifyAsync(
+                        "Application minimized to tray",
+                        NotificationScenario.MinimizeToTray,
+                        NotificationType.Info);
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"? MinimizeToTray notification failed: {ex.Message}");
+            }
+        });
     }
 
     private void ShowMainWindowFromTray()
     {
+        Log.Information("Show requested via tray/secondary instance");
         _trayService?.SetMainWindowVisible(true);
     }
 
@@ -415,6 +495,7 @@ public partial class App : Application
         _trayService?.Dispose();
         _singleInstanceService?.Dispose();
         _serviceProvider?.Dispose();
+        Log.CloseAndFlush();
         base.OnExit(e);
     }
 
@@ -437,6 +518,7 @@ public partial class App : Application
 
         // Register ViewModels
         services.AddSingleton<SnowblindModPlayer.ViewModels.VideosViewModel>();
+        services.AddSingleton<SnowblindModPlayer.ViewModels.LogsViewModel>();
 
         // Tray service
         services.AddSingleton<ITrayService, TrayService>();
@@ -446,4 +528,5 @@ public partial class App : Application
         services.AddSingleton<NotificationOrchestrator>();
         services.AddSingleton<INotificationOrchestrator>(sp => sp.GetRequiredService<NotificationOrchestrator>());
     }
+ }
 }

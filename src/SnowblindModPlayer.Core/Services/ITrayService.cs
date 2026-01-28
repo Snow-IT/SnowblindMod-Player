@@ -24,8 +24,8 @@ public interface ITrayService
         Func<Task>? onStopRequested = null,
         Func<Task<List<VideoItem>>>? getVideosForMenu = null);
 
-    /// <summary>Show a notification balloon.</summary>
-    void ShowNotification(string title, string message);
+    /// <summary>Show a notification balloon with optional type indicator.</summary>
+    void ShowNotification(string title, string message, NotificationType type = NotificationType.Info);
 
     /// <summary>Update main window visibility (e.g., when minimizing to tray).</summary>
     void SetMainWindowVisible(bool isVisible);

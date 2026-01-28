@@ -137,6 +137,17 @@ public class TrayService : ITrayService
     private IntPtr _trayHIcon;
     private IntPtr _oldWndProc;
     private WndProcDelegate? _wndProcDelegate;
+    private readonly ILoggingService _logger;
+    private readonly ILibraryChangeNotifier _changeNotifier;
+    private readonly object _videosLock = new();
+    private List<VideoItem> _cachedVideos = new();
+    private bool _subscribed;
+
+    public TrayService(ILoggingService logger, ILibraryChangeNotifier changeNotifier)
+    {
+        _logger = logger;
+        _changeNotifier = changeNotifier;
+    }
 
     public void Initialize(
         Action onShowRequested,
@@ -153,6 +164,14 @@ public class TrayService : ITrayService
         _onStopRequested = onStopRequested;
         _getVideosForMenu = getVideosForMenu;
 
+        if (!_subscribed)
+        {
+            _changeNotifier.VideoImported += (_, _) => _ = RefreshCachedVideosAsync();
+            _changeNotifier.VideoRemoved += (_, _) => _ = RefreshCachedVideosAsync();
+            _changeNotifier.DefaultVideoChanged += (_, _) => _ = RefreshCachedVideosAsync();
+            _subscribed = true;
+        }
+
         try
         {
             // Create hidden window to handle messages
@@ -161,6 +180,7 @@ public class TrayService : ITrayService
             if (_hwnd == IntPtr.Zero)
             {
                 System.Diagnostics.Debug.WriteLine("? Failed to create window for tray icon");
+                _logger.Log(LogLevel.Error, "Tray", "Failed to create tray window");
                 return;
             }
 
@@ -191,15 +211,48 @@ public class TrayService : ITrayService
             if (Shell_NotifyIcon(NIM_ADD, ref _nid))
             {
                 System.Diagnostics.Debug.WriteLine("? Tray icon added successfully");
+                _logger.Log(LogLevel.Debug, "Tray", "Tray icon added");
             }
             else
             {
                 System.Diagnostics.Debug.WriteLine("? Failed to add tray icon");
+                _logger.Log(LogLevel.Error, "Tray", "Failed to add tray icon");
             }
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"? TrayService.Initialize failed: {ex.Message}");
+            _logger.Log(LogLevel.Error, "Tray", $"Initialize failed: {ex.Message}", ex);
+        }
+
+        _ = RefreshCachedVideosAsync();
+    }
+
+    private async Task RefreshCachedVideosAsync()
+    {
+        if (_getVideosForMenu == null)
+            return;
+
+        try
+        {
+            var videos = await _getVideosForMenu();
+            lock (_videosLock)
+            {
+                _cachedVideos = videos;
+            }
+            _logger.Log(LogLevel.Debug, "Tray", $"Video list refreshed ({videos.Count})");
+        }
+        catch (Exception ex)
+        {
+            _logger.Log(LogLevel.Error, "Tray", $"Failed to refresh video list: {ex.Message}", ex);
+        }
+    }
+
+    private List<VideoItem> GetCachedVideos()
+    {
+        lock (_videosLock)
+        {
+            return _cachedVideos.ToList();
         }
     }
 
@@ -295,7 +348,15 @@ public class TrayService : ITrayService
             
             // Videos submenu
             var videosMenu = CreatePopupMenu();
-            var videos = _getVideosForMenu != null ? await _getVideosForMenu() : new List<VideoItem>();
+            var videos = GetCachedVideos();
+            if (videos.Count == 0 && _getVideosForMenu != null)
+            {
+                videos = await _getVideosForMenu();
+                lock (_videosLock)
+                {
+                    _cachedVideos = videos;
+                }
+            }
             
             if (videos.Count == 0)
             {
@@ -345,20 +406,24 @@ public class TrayService : ITrayService
             if (cmd == CMD_SHOW)
             {
                 _onShowRequested?.Invoke();
+                _logger.Log(LogLevel.Info, "Tray", "Show requested");
             }
             else if (cmd == CMD_PLAY_DEFAULT)
             {
                 if (_onPlayDefaultRequested != null)
                     await _onPlayDefaultRequested();
+                _logger.Log(LogLevel.Info, "Tray", "Play default requested");
             }
             else if (cmd == CMD_STOP)
             {
                 if (_onStopRequested != null)
                     await _onStopRequested();
+                _logger.Log(LogLevel.Info, "Tray", "Stop requested");
             }
             else if (cmd == CMD_EXIT)
             {
                 _onExitRequested?.Invoke();
+                _logger.Log(LogLevel.Info, "Tray", "Exit requested");
             }
             else if (cmd >= CMD_VIDEO_BASE && cmd < CMD_VIDEO_BASE + 100)
             {
@@ -367,46 +432,49 @@ public class TrayService : ITrayService
                 {
                     var sorted = videos.OrderBy(v => v.DisplayName).ToList();
                     await _onPlayVideoRequested(sorted[index].Id);
+                    _logger.Log(LogLevel.Info, "Tray", $"Play video requested: {sorted[index].DisplayName}");
                 }
             }
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"? Error handling menu command {cmd}: {ex.Message}");
+            _logger.Log(LogLevel.Error, "Tray", $"Menu command error: {ex.Message}", ex);
         }
     }
 
-    public void ShowNotification(string title, string message)
+    public void ShowNotification(string title, string message, NotificationType type = NotificationType.Info)
     {
         try
         {
-            System.Diagnostics.Debug.WriteLine($"?? ShowNotification called: title='{title}', message='{message}'");
-            System.Diagnostics.Debug.WriteLine($"   App visibility: MainWindow={Application.Current?.MainWindow?.IsVisible}, ShowInTaskbar={Application.Current?.MainWindow?.ShowInTaskbar}");
+            System.Diagnostics.Debug.WriteLine($"?? ShowNotification: title='{title}', message='{message}', type={type}");
+            _logger.Log(LogLevel.Debug, "Tray", $"Toast: {title} - {message}");
             
-            // Ensure flags include NIF_INFO
-            _nid.uFlags |= NIF_INFO;
-            _nid.szInfo = message;
-            _nid.szInfoTitle = title;
-            _nid.dwInfoFlags = NIIF_INFO; // Use NIIF_INFO for informational icon
+            // Create and show custom toast window on UI thread
+            if (Application.Current == null)
+            {
+                System.Diagnostics.Debug.WriteLine($"   ??  Application.Current is null, cannot show toast");
+                return;
+            }
 
-            System.Diagnostics.Debug.WriteLine($"   Calling Shell_NotifyIcon(NIM_MODIFY)...");
-            
-            bool success = Shell_NotifyIcon(NIM_MODIFY, ref _nid);
-            
-            if (success)
+            Application.Current.Dispatcher.BeginInvoke(() =>
             {
-                System.Diagnostics.Debug.WriteLine($"? Shell_NotifyIcon succeeded - toast should appear");
-            }
-            else
-            {
-                int errorCode = Marshal.GetLastWin32Error();
-                System.Diagnostics.Debug.WriteLine($"? Shell_NotifyIcon FAILED - Win32 Error: {errorCode}");
-                System.Diagnostics.Debug.WriteLine($"   hWnd: {_nid.hWnd}, uID: {_nid.uID}, uFlags: {_nid.uFlags}");
-            }
+                try
+                {
+                    var toast = new Views.ToastWindow(title, message, type, 6000);
+                    toast.Show();
+                    System.Diagnostics.Debug.WriteLine($"? Custom toast window created and shown");
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"? Toast creation failed: {ex.Message}");
+                }
+            });
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"? ShowNotification exception: {ex.Message}");
+            _logger.Log(LogLevel.Error, "Tray", $"ShowNotification failed: {ex.Message}", ex);
         }
     }
 

@@ -44,6 +44,7 @@ public interface INotificationOrchestrator
     Task ShowBannerAsync(string message, NotificationType type = NotificationType.Info, int durationMs = 5000);
     Task<bool> ShowConfirmationAsync(string title, string message);
     Task ShowErrorAsync(string title, string message);
-    Task ShowTrayToastAsync(string title, string message, int durationMs = 6000);
+    Task ShowTrayToastAsync(string title, string message, NotificationType type = NotificationType.Info, int durationMs = 6000);
+    Task NotifyErrorAsync(string message, Exception? exception = null, NotificationScenario scenario = NotificationScenario.Generic);
     Task NotifyAsync(string message, NotificationScenario scenario, NotificationType type = NotificationType.Info);
 }
