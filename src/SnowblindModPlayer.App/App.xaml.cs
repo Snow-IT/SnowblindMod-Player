@@ -187,7 +187,41 @@ public partial class App : Application
                                             await Task.Delay(autoplayDelayMs);
                                         }
                                         
-                                        System.Diagnostics.Debug.WriteLine("? Starting autoplay...");
+                                        System.Diagnostics.Debug.WriteLine("? Starting autoplay validation...");
+                                        
+                                        // Validate default video exists
+                                        var defaultVideo = await libraryService.GetDefaultVideoAsync();
+                                        if (defaultVideo == null)
+                                        {
+                                            System.Diagnostics.Debug.WriteLine("? Autoplay: No default video set");
+                                            await Dispatcher.InvokeAsync(async () =>
+                                            {
+                                                var notifier = _serviceProvider!.GetRequiredService<INotificationOrchestrator>();
+                                                await notifier.NotifyAsync(
+                                                    "No default video set - autoplay skipped",
+                                                    NotificationScenario.AutoplayMissingDefault,
+                                                    NotificationType.Warning);
+                                            });
+                                            return;
+                                        }
+
+                                        // Validate monitor selection exists
+                                        var selectedMonitorId = settingsService.GetSelectedMonitorId();
+                                        if (string.IsNullOrWhiteSpace(selectedMonitorId))
+                                        {
+                                            System.Diagnostics.Debug.WriteLine("? Autoplay: No monitor selected");
+                                            await Dispatcher.InvokeAsync(async () =>
+                                            {
+                                                var notifier = _serviceProvider!.GetRequiredService<INotificationOrchestrator>();
+                                                await notifier.NotifyAsync(
+                                                    "No monitor selected - autoplay skipped",
+                                                    NotificationScenario.AutoplayMissingMonitor,
+                                                    NotificationType.Warning);
+                                            });
+                                            return;
+                                        }
+
+                                        System.Diagnostics.Debug.WriteLine("? Autoplay: Starting default video");
                                         await playbackOrchestrator.PlayDefaultVideoAsync();
                                     }
                                     catch (Exception ex)
@@ -284,6 +318,40 @@ public partial class App : Application
                                      {
                                          if (autoplayDelayMs > 0)
                                              await Task.Delay(autoplayDelayMs);
+
+                                         // Validate default video exists
+                                         var defaultVideo = await libraryService.GetDefaultVideoAsync();
+                                         if (defaultVideo == null)
+                                         {
+                                             System.Diagnostics.Debug.WriteLine("? Autoplay: No default video set");
+                                             await Dispatcher.InvokeAsync(async () =>
+                                             {
+                                                 var notifier = _serviceProvider!.GetRequiredService<INotificationOrchestrator>();
+                                                 await notifier.NotifyAsync(
+                                                     "No default video set - autoplay skipped",
+                                                     NotificationScenario.AutoplayMissingDefault,
+                                                     NotificationType.Warning);
+                                             });
+                                             return;
+                                         }
+
+                                         // Validate monitor selection exists
+                                         var selectedMonitorId = settingsService.GetSelectedMonitorId();
+                                         if (string.IsNullOrWhiteSpace(selectedMonitorId))
+                                         {
+                                             System.Diagnostics.Debug.WriteLine("? Autoplay: No monitor selected");
+                                             await Dispatcher.InvokeAsync(async () =>
+                                             {
+                                                 var notifier = _serviceProvider!.GetRequiredService<INotificationOrchestrator>();
+                                                 await notifier.NotifyAsync(
+                                                     "No monitor selected - autoplay skipped",
+                                                     NotificationScenario.AutoplayMissingMonitor,
+                                                     NotificationType.Warning);
+                                             });
+                                             return;
+                                         }
+
+                                         System.Diagnostics.Debug.WriteLine("? Autoplay: Starting default video");
                                          await playbackOrchestrator.PlayDefaultVideoAsync();
                                      }
                                      catch (Exception ex)

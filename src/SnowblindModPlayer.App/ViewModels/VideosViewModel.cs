@@ -8,6 +8,7 @@ using SnowblindModPlayer.Infrastructure.Services;
 using SnowblindModPlayer.UI.MVVM;
 using SnowblindModPlayer.UI.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
+using System.IO;
 
 namespace SnowblindModPlayer.ViewModels;
 
@@ -182,17 +183,24 @@ public class VideosViewModel : ViewModelBase
         if (SelectedMedia == null)
             return;
 
+        // Cache the item before removal
+        var mediaToRemove = SelectedMedia;
+
         var confirm = await _notifier.ShowConfirmationAsync(
             "Confirm Removal",
-            $"Are you sure you want to remove \"{SelectedMedia.DisplayName}\"?\n\nThe file will be permanently deleted.");
+            $"Are you sure you want to remove \"{mediaToRemove.DisplayName}\"?\n\nThe file will be permanently deleted.");
         if (!confirm)
             return;
 
         try
         {
-            await _libraryService.RemoveMediaAsync(SelectedMedia.Id);
+            await _libraryService.RemoveMediaAsync(mediaToRemove.Id);
+            
+            // Clear selection BEFORE reloading videos
+            SelectedMedia = null;
+            
             await LoadVideosAsync();
-            await _notifier.NotifyAsync($"Removed: {SelectedMedia.DisplayName}", NotificationScenario.RemoveSuccess, NotificationType.Success);
+            await _notifier.NotifyAsync($"Removed: {mediaToRemove.DisplayName}", NotificationScenario.RemoveSuccess, NotificationType.Success);
         }
         catch (Exception ex)
         {
@@ -230,8 +238,18 @@ public class VideosViewModel : ViewModelBase
 
     private async void PlaySelectedAsync()
     {
-        if (SelectedMedia == null || string.IsNullOrEmpty(SelectedMedia.StoredPath))
+        if (SelectedMedia == null)
             return;
+
+        // Validate file exists before trying to play
+        if (string.IsNullOrEmpty(SelectedMedia.StoredPath) || !File.Exists(SelectedMedia.StoredPath))
+        {
+            await _notifier.NotifyAsync(
+                $"Video file not found: {SelectedMedia.DisplayName}", 
+                NotificationScenario.PlaybackMissingFile, 
+                NotificationType.Error);
+            return;
+        }
 
         try
         {
@@ -252,7 +270,10 @@ public class VideosViewModel : ViewModelBase
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"Playback error: {ex.Message}");
-            await _notifier.NotifyAsync($"Playback failed: {ex.Message}", NotificationScenario.PlaybackError, NotificationType.Error);
+            await _notifier.NotifyAsync(
+                $"Playback failed: {ex.Message}", 
+                NotificationScenario.PlaybackError, 
+                NotificationType.Error);
         }
     }
 }

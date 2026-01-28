@@ -46,19 +46,30 @@ public class PlaybackOrchestrator
             var video = await _libraryService.GetMediaByIdAsync(videoId);
             if (video == null)
             {
-                await _notifier.NotifyAsync("Video not found", NotificationScenario.PlaybackError, NotificationType.Error);
+                await _notifier.NotifyAsync(
+                    "Video not found in library", 
+                    NotificationScenario.PlaybackError, 
+                    NotificationType.Error);
                 return;
             }
+
+            // Check if file exists
             if (string.IsNullOrWhiteSpace(video.StoredPath) || !File.Exists(video.StoredPath))
             {
-                await _notifier.NotifyAsync("Video file missing", NotificationScenario.PlaybackError, NotificationType.Error);
+                await _notifier.NotifyAsync(
+                    $"Video file not found: {video.DisplayName}", 
+                    NotificationScenario.PlaybackMissingFile, 
+                    NotificationType.Error);
                 return;
             }
 
             var monitorId = _settingsService.GetSelectedMonitorId();
             if (string.IsNullOrWhiteSpace(monitorId))
             {
-                await _notifier.NotifyAsync("No monitor selected - skipping playback", NotificationScenario.PlaybackError, NotificationType.Warning);
+                await _notifier.NotifyAsync(
+                    "No monitor selected - playback skipped", 
+                    NotificationScenario.PlaybackError, 
+                    NotificationType.Warning);
                 return;
             }
 
@@ -68,7 +79,10 @@ public class PlaybackOrchestrator
                 var playerWindow = _serviceProvider.GetService(typeof(PlayerWindow)) as PlayerWindow;
                 if (playerWindow == null)
                 {
-                    await _notifier.NotifyAsync("Player window not available", NotificationScenario.PlaybackError, NotificationType.Error);
+                    await _notifier.NotifyAsync(
+                        "Player window not available", 
+                        NotificationScenario.PlaybackError, 
+                        NotificationType.Error);
                     return;
                 }
 
@@ -86,12 +100,16 @@ public class PlaybackOrchestrator
         }
         catch (Exception ex)
         {
-            await _notifier.NotifyAsync($"Playback failed: {ex.Message}", NotificationScenario.PlaybackError, NotificationType.Error);
+            await _notifier.NotifyAsync(
+                $"Playback failed: {ex.Message}", 
+                NotificationScenario.PlaybackError, 
+                NotificationType.Error);
         }
     }
 
     /// <summary>
     /// Unified entry point: Play default video.
+    /// Validates that default video exists and file is accessible.
     /// </summary>
     public async Task PlayDefaultVideoAsync()
     {
@@ -100,7 +118,20 @@ public class PlaybackOrchestrator
             var defaultVideo = await _libraryService.GetDefaultVideoAsync();
             if (defaultVideo == null)
             {
-                await _notifier.NotifyAsync("No default video set", NotificationScenario.PlaybackError, NotificationType.Warning);
+                await _notifier.NotifyAsync(
+                    "No default video set", 
+                    NotificationScenario.AutoplayMissingDefault, 
+                    NotificationType.Warning);
+                return;
+            }
+
+            // Validate file exists
+            if (string.IsNullOrWhiteSpace(defaultVideo.StoredPath) || !File.Exists(defaultVideo.StoredPath))
+            {
+                await _notifier.NotifyAsync(
+                    $"Default video file not found: {defaultVideo.DisplayName}", 
+                    NotificationScenario.PlaybackMissingFile, 
+                    NotificationType.Error);
                 return;
             }
 
@@ -108,7 +139,10 @@ public class PlaybackOrchestrator
         }
         catch (Exception ex)
         {
-            await _notifier.NotifyAsync($"PlayDefault failed: {ex.Message}", NotificationScenario.PlaybackError, NotificationType.Error);
+            await _notifier.NotifyAsync(
+                $"PlayDefault failed: {ex.Message}", 
+                NotificationScenario.PlaybackError, 
+                NotificationType.Error);
         }
     }
 

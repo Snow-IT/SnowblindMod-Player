@@ -147,37 +147,44 @@ public class LibraryService : ILibraryService
                 var media = await GetMediaByIdAsync(id);
                 if (media != null)
                 {
+                    // Delete video file (skip silently if already gone)
                     try
                     {
                         if (!string.IsNullOrEmpty(media.StoredPath) && File.Exists(media.StoredPath))
                         {
                             File.Delete(media.StoredPath);
+                            System.Diagnostics.Debug.WriteLine($"? Deleted video file: {media.StoredPath}");
                         }
                     }
                     catch (Exception ex)
                     {
-                        System.Diagnostics.Debug.WriteLine($"Delete video file failed: {ex.Message}");
+                        // Log but don't throw - file may already be deleted manually
+                        System.Diagnostics.Debug.WriteLine($"? Could not delete video file: {ex.Message}");
                     }
 
+                    // Delete thumbnail (skip silently if already gone)
                     try
                     {
                         if (!string.IsNullOrEmpty(media.ThumbnailPath) && File.Exists(media.ThumbnailPath))
                         {
                             File.Delete(media.ThumbnailPath);
+                            System.Diagnostics.Debug.WriteLine($"? Deleted thumbnail: {media.ThumbnailPath}");
                         }
                     }
                     catch (Exception ex)
                     {
-                        System.Diagnostics.Debug.WriteLine($"Delete thumbnail failed: {ex.Message}");
+                        // Log but don't throw - thumbnail may already be deleted or was never created
+                        System.Diagnostics.Debug.WriteLine($"? Could not delete thumbnail: {ex.Message}");
                     }
                 }
 
-                // Delete from database
+                // Delete from database (this will always succeed if ID exists)
                 using (var command = connection.CreateCommand())
                 {
                     command.CommandText = "DELETE FROM Media WHERE Id = @id";
                     command.Parameters.AddWithValue("@id", id);
-                    await command.ExecuteNonQueryAsync();
+                    var rowsAffected = await command.ExecuteNonQueryAsync();
+                    System.Diagnostics.Debug.WriteLine($"? Deleted {rowsAffected} database record(s)");
                 }
 
                 // Reset default video if it was this video
@@ -185,12 +192,15 @@ public class LibraryService : ILibraryService
                 if (defaultVideoId == id)
                 {
                     _settingsService.Set(DefaultVideoIdKey, string.Empty);
+                    System.Diagnostics.Debug.WriteLine($"? Reset default video (was: {id})");
                 }
             }
+
+            System.Diagnostics.Debug.WriteLine($"? RemoveMediaAsync completed successfully for ID: {id}");
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"RemoveMediaAsync failed: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"? RemoveMediaAsync failed: {ex.Message}");
             throw;
         }
     }

@@ -17,66 +17,103 @@ Follow docs/SPEC_FINAL.md strictly.
 
 ## Current Implementation State (Phase C-D Continuation)
 
-### Completed
+### ✅ Completed (Phase C - TODO Completion Sprint)
 - ✓ Tray icon (transparent background, native P/Invoke)
 - ✓ Tray context menu: Show → Play Default → Play Video [Dynamic Submenu] → Stop → Exit
-- ✓ Play Video submenu properly attached (MF_POPUP flag) with video list
 - ✓ PlaybackOrchestrator: unified async entry point for all playback scenarios
 - ✓ Monitor selection respected (PlayerWindow.PositionOnSelectedMonitor)
 - ✓ Tray menu video list sorted (default first, then alphabetical per SPEC 5.2)
 - ✓ Autoplay on startup (configurable delay via AutoplayDelayMs setting)
-- ✓ VariantB.ico added as secondary icon resource for testing
+- ✓ **Phase C COMPLETION (2026-01-27):**
+  - ✓ NotificationOrchestrator smart routing (Banner/Toast/Dialog based on window visibility)
+  - ✓ Missing file playback notification (UI) with validation + proper scenarios
+  - ✓ Missing default video notification (Autoplay) with validation + skip
+  - ✓ Monitor selection validation (Autoplay) with skip + notification
+  - ✓ Remove missing-file exception handling (graceful DB cleanup)
+  - ✓ Dynamic banner width (~1/3 app width via MultiplyConverter)
+  - ✓ VideosViewModel fixes (PlaySelectedAsync file validation, RemoveSelectedAsync null-safety)
+  - ✓ ThumbnailService registration fixed (LibVLC instead of FFmpeg)
 
-### Next (Immediate)
-- NotificationOrchestrator implementation (Banner, Dialog, Toast services)
-- Import/Remove with LibraryOrchestrator (Phase D proper)
+### 🟡 In Progress / Testing Required
+- **Notifications (P1):** Toast via Shell_NotifyIcon may not be visible (P/Invoke, Windows 10/11 differences)
+- **Thumbnails (P2):** LibVLC registration now correct; test import again to verify generation
+- **Banner Display (P3):** Test case 7A shows banner not displayed; debug NotifyAsync() routing
 
-## Agent behavior
+### ⏳ Pending (Phase D / Future)
+- LibraryOrchestrator (unified Import/Remove/SetDefault)
+- LibraryChangeNotifier (event-driven UI sync)
+- Single Instance + Autostart (Task Scheduler - PENDING)
+- Logs UI + file viewer (PENDING)
 
-- When you identify potential concerns, tradeoffs, or improvement opportunities (including during planning/spec interpretation), always present 2-3 concrete options with pros/cons and a recommendation. Do not mention 'alternative strategies' without listing them.
-- Implement directly (agent style). Make changes in small batches.
-- After edits: ensure solution builds; add minimal tests when cheap.
-- If ambiguous: document assumptions in docs/DECISIONS.md (do not change requirements).
-- **ALWAYS update docs/DECISIONS.md with new architectural decisions, design patterns, or known limitations.**
-- **ALWAYS update this file (copilot-instructions.md) when tech decisions or implementation state changes.**
-- Proactively present explicit alternative strategies/options (2-3) with pros/cons and a recommendation whenever potential concerns or improvements arise, including during planning and spec interpretation.
+---
 
-## Implementation order (Risk-first)
-1) ✓ Playback spike + hotkeys (COMPLETE)
-2) ✓ Multi-monitor selection + fullscreen (COMPLETE)
-3) ✓ Storage hybrid + cleanup (COMPLETE)
-4) ✓ Import/remove + thumbnail queue (IN PROGRESS)
-5) ✓ Videos UI list/tile + toolbar (IN PROGRESS)
-6) ✓ Tray + autoplay + single instance + autostart (Tray COMPLETE, **Play Video Submenu COMPLETE, Autoplay COMPLETE**, SingleInstance/Autostart PENDING)
-7) Logs UI + file viewer (PENDING)
-8) GitHub Actions portable ZIP (PENDING)
+## Known Issues & Debugging Focus
 
-## Architecture Reference
+### Critical (Phase C Completion Blockers)
 
-### PlaybackOrchestrator (NEW - Phase C)
-- **File:** `src/SnowblindModPlayer.App/Services/PlaybackOrchestrator.cs`
-- **Purpose:** Unified orchestration of video playback across all scenarios
-- **Methods:**
-  - `PlayVideoAsync(videoId)`: Play specific video (opens PlayerWindow, applies settings, starts playback)
-  - `PlayDefaultVideoAsync()`: Play default/favorite video
-  - `ApplyPlaybackSettingsAsync()`: Sync volume, mute, loop from settings service
-- **Usage:** Tray menu (Play Video submenu), Autoplay on startup, future UI clicks
-- **Design Pattern:** Service Orchestrator / Facade (combines multiple services into single unified interface)
+1. **Toast Notifications (P1)**
+   - Implementiert: `TrayService.ShowNotification()` via `Shell_NotifyIcon` P/Invoke
+   - **Problem:** Nicht sichtbar in Tests 2B, 3B, 7B
+   - **Ursache:** P/Invoke Notification nur wenn App im Tray? Windows 10 vs 11 issue?
+   - **Workaround:** Banner-only für jetzt, bis Toast gelöst
+   - **Alternative:** H.NotifyIcon.Wpf library (höhere Komplexität)
 
-### PlaybackService (Existing - Phase A/B)
-- **File:** `src/SnowblindModPlayer.Infrastructure/Services/PlaybackService.cs`
-- **Design:** Singleton, no DI (intentional: only ONE MediaPlayer instance per app)
-- **Responsibility:** Low-level LibVLC playback (Play/Pause/Stop/Seek/Volume/Mute)
-- **Do NOT add DI:** Would violate single-instance constraint
+2. **Thumbnails Generation (P2)**
+   - **FIXED:** ServiceCollectionExtensions.cs jetzt `ThumbnailService` (LibVLC) statt FFmpeg
+   - **Next:** Test 5 wieder ausführen um zu verifizieren dass Thumbnails generiert werden
+   - Queue arbeitet sequentiell (max 1 parallel), Timeout 10s, Retry 2x
+   - Fallback: VLC → Placeholder (wenn alles fehlschlägt)
 
-### TrayService (Phase C - Enhanced)
-- **File:** `src/SnowblindModPlayer.App/Services/TrayService.cs`
-- **Implementation:** Native Windows P/Invoke Shell_NotifyIcon (no external UI framework)
-- **Callbacks:** Routes to PlaybackOrchestrator for Play/Stop operations
-- **Menu Structure:** 
-  - Show → MainWindow
-  - Play Default → PlaybackOrchestrator.PlayDefaultVideoAsync()
-  - **Play Video (Submenu)** → Dynamic list of videos → PlaybackOrchestrator.PlayVideoAsync(videoId)
-  - Stop → PlaybackService.StopAsync()
-  - Exit → App.Shutdown()
-- **Video List Sorting:** Default first (★), then alphabetical (SPEC 5.2)
+3. **Banner Display in UI (P3)**
+   - **Test 7A Result:** Kein Banner angezeigt (sollte aber!)
+   - **Debug Path:** PlaySelectedAsync() → NotifyAsync(PlaybackError) → IsMainWindowVisible() → ShowBannerAsync()
+   - Möglich: `MainWindow` nicht korrekt konfiguriert oder `ShowBanner()` Call fehlschlagen
+
+### Design Issues (Mittel-Priorität)
+
+- **VideosViewModel vs PlaybackOrchestrator:** Zwei Playback-Eintrittspunkte (Dualität)
+  - VideosViewModel.PlaySelectedAsync() öffnet PlayerWindow direkt
+  - PlaybackOrchestrator.PlayVideoAsync() ist offizielle Eintrittspunkt
+  - → Sollten vereinheitlicht werden (Phase D)
+
+---
+
+## Test Suite für Morgen
+
+Siehe `docs/DECISIONS.md` → Abschnitt "🧪 Zu testende Punkte (Morgen - PC2)"
+
+**Kritische Tests:**
+1. Thumbnails generieren (mit neuer Registrierung)
+2. Missing file Playback → Banner (nur, bis Toast gelöst)
+3. Missing default Autoplay → Notification
+4. Monitor missing Autoplay → Notification
+5. Remove missing files → Graceful
+6. Banner width responsive
+7. Smart routing Banner (7A)
+
+---
+
+## Implementation Notes
+
+### Architecture Patterns Used
+- **Service Orchestrator:** PlaybackOrchestrator für unified playback
+- **Smart Notification Routing:** Context-aware Banner/Toast/Dialog
+- **Exception-Safe Operations:** RemoveMediaAsync, PlaySelectedAsync mit Validierung
+- **Sequential Queue:** ThumbnailQueueService (max 1 parallel, timeout, retry)
+- **Value Converter:** MultiplyConverter für responsive UI binding
+
+### Files Modified (Phase C Completion)
+- `NotificationOrchestrator.cs` → Smart routing implementation
+- `PlaybackOrchestrator.cs` → New scenarios, better error messages
+- `LibraryService.cs` → Exception-safe file deletion
+- `ThumbnailQueueService.cs` → CancellationToken, enhanced logging
+- `ThumbnailService.cs` → CancellationToken support
+- `VideosViewModel.cs` → File validation, null-safety fixes
+- `App.xaml.cs` → Autoplay validation (Default + Monitor)
+- `MainWindow.xaml` → Dynamic banner width binding
+- `ServiceCollectionExtensions.cs` → **CRITICAL FIX:** LibVLC ThumbnailService registration
+- Created: `MultiplyConverter.cs`
+
+### Git Commits This Session
+1. Main: "Phase C TODO Completion Sprint (7 items): Notifications, Thumbnails, Autoplay, Exception-safe Remove"
+2. Consider: Separate commit for "Fix: ThumbnailService registration (LibVLC instead of FFmpeg)" if needed

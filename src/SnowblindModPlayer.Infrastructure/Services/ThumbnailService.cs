@@ -25,10 +25,16 @@ public class ThumbnailService : IThumbnailService
         }
     }
 
-    public async Task<string> GenerateThumbnailAsync(string videoPath, string outputPath, TimeSpan? videoDuration = null)
+    public async Task<string> GenerateThumbnailAsync(
+        string videoPath, 
+        string outputPath, 
+        TimeSpan? videoDuration = null,
+        CancellationToken cancellationToken = default)
     {
         try
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
             if (string.IsNullOrEmpty(videoPath) || !File.Exists(videoPath))
             {
                 throw new FileNotFoundException($"Video file not found: {videoPath}");
@@ -44,7 +50,7 @@ public class ThumbnailService : IThumbnailService
             // Try VLC snapshot, fallback to placeholder
             if (_libVLC != null)
             {
-                if (await TryGenerateVLCSnapshotAsync(videoPath, outputPath, videoDuration))
+                if (await TryGenerateVLCSnapshotAsync(videoPath, outputPath, videoDuration, cancellationToken))
                 {
                     System.Diagnostics.Debug.WriteLine($"VLC thumbnail generated: {outputPath}");
                     return outputPath;
@@ -55,6 +61,11 @@ public class ThumbnailService : IThumbnailService
             await CreatePlaceholderThumbnailAsync(outputPath);
             System.Diagnostics.Debug.WriteLine($"Placeholder thumbnail created: {outputPath}");
             return outputPath;
+        }
+        catch (OperationCanceledException)
+        {
+            System.Diagnostics.Debug.WriteLine($"Thumbnail generation cancelled: {outputPath}");
+            throw;
         }
         catch (Exception ex)
         {
@@ -74,13 +85,19 @@ public class ThumbnailService : IThumbnailService
         }
     }
 
-    private async Task<bool> TryGenerateVLCSnapshotAsync(string videoPath, string outputPath, TimeSpan? videoDuration)
+    private async Task<bool> TryGenerateVLCSnapshotAsync(
+        string videoPath, 
+        string outputPath, 
+        TimeSpan? videoDuration,
+        CancellationToken cancellationToken)
     {
         if (_libVLC == null)
             return false;
 
         try
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
             using var media = new Media(_libVLC, videoPath, FromType.FromPath);
             using var mediaPlayer = new MediaPlayer(_libVLC);
 
@@ -114,9 +131,11 @@ public class ThumbnailService : IThumbnailService
             mediaPlayer.Play();
 
             // Wait for playback to start and reach snapshot position
-            await Task.Delay(500); // Let playback initialize
+            await Task.Delay(500, cancellationToken); // Let playback initialize
             mediaPlayer.Time = snapshotTimeMs;
-            await Task.Delay(500); // Let frame decode
+            await Task.Delay(500, cancellationToken); // Let frame decode
+
+            cancellationToken.ThrowIfCancellationRequested();
 
             // Save snapshot
             bool success = mediaPlayer.TakeSnapshot(0, outputPath, ThumbnailWidth, ThumbnailHeight);
@@ -128,6 +147,11 @@ public class ThumbnailService : IThumbnailService
             }
 
             return true;
+        }
+        catch (OperationCanceledException)
+        {
+            System.Diagnostics.Debug.WriteLine($"VLC snapshot generation cancelled: {videoPath}");
+            throw;
         }
         catch (Exception ex)
         {

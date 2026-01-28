@@ -10,15 +10,32 @@ public enum NotificationType
 
 public enum NotificationScenario
 {
+    // Import/Remove
     ImportSuccess,
     ImportError,
     RemoveSuccess,
     RemoveError,
+    
+    // Playback
     PlaybackError,
+    PlaybackMissingFile,
+    
+    // Default Video
     DefaultVideoSet,
+    DefaultVideoMissing,
+    
+    // Autoplay
     AutoplayStarted,
+    AutoplayMissingDefault,
+    AutoplayMissingMonitor,
+    
+    // Tray
     MinimizeToTray,
+    
+    // Settings
     SettingsSaved,
+    
+    // Generic
     Generic
 }
 

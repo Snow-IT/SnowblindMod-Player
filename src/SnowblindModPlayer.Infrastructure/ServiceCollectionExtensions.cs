@@ -22,7 +22,7 @@ public static class ServiceCollectionExtensions
         });
 
         services.AddSingleton<ILibraryService, LibraryService>();
-        services.AddSingleton<IThumbnailService, ThumbnailServiceFFmpeg>();
+        services.AddSingleton<IThumbnailService, ThumbnailService>();  // Use LibVLC-based implementation
         services.AddSingleton<IThumbnailQueueService, ThumbnailQueueService>();
         services.AddSingleton<IImportService, ImportService>();
         services.AddSingleton<ILoggingService, LoggingService>();
