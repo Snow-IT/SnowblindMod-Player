@@ -12,14 +12,22 @@
                     Padding="20" 
                     Margin="0,0,0,16">
                 <StackPanel>
-                    <TextBlock Text="Appearance" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,12" />
+                    <TextBlock Text="{DynamicResource Text.Appearance}" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,12" />
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="180" />
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Text="Theme" VerticalAlignment="Center" Foreground="{DynamicResource Brush.TextMuted}" />
+                        <TextBlock Grid.Column="0" Text="{DynamicResource Text.Theme}" VerticalAlignment="Center" Foreground="{DynamicResource Brush.TextMuted}" />
                         <ComboBox Grid.Column="1" x:Name="ThemePreferenceComboBox" Width="200" HorizontalAlignment="Left" />
+                    </Grid>
+                    <Grid Margin="0,10,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="180" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="{DynamicResource Text.LanguageMode}" VerticalAlignment="Center" Foreground="{DynamicResource Brush.TextMuted}" />
+                        <ComboBox Grid.Column="1" x:Name="LanguageModeComboBox" Width="200" HorizontalAlignment="Left" />
                     </Grid>
                 </StackPanel>
             </Border>
@@ -31,8 +39,8 @@
                     Padding="20" 
                     Margin="0,0,0,16">
                 <StackPanel>
-                    <TextBlock Text="Display" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,12" />
-                    <TextBlock Text="Monitor Selection" Foreground="{DynamicResource Brush.TextMuted}" Margin="0,0,0,12" />
+                    <TextBlock Text="{DynamicResource Text.Display}" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,12" />
+                    <TextBlock Text="{DynamicResource Text.MonitorSelection}" Foreground="{DynamicResource Brush.TextMuted}" Margin="0,0,0,12" />
                     <ContentControl x:Name="MonitorSelectionHost" />
                 </StackPanel>
             </Border>
@@ -44,21 +52,22 @@
                     Padding="20" 
                     Margin="0,0,0,16">
                 <StackPanel>
-                    <TextBlock Text="Playback" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,12" />
+                    <TextBlock Text="{DynamicResource Text.Playback}" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,12" />
                     
-                    <CheckBox x:Name="LoopEnabledCheckBox" Content="Enable Loop Playback" Margin="0,0,0,10" />
-                    <CheckBox x:Name="FullscreenOnStartCheckBox" Content="Start in Fullscreen" Margin="0,0,0,10" />
-                    <CheckBox x:Name="MuteOnStartupCheckBox" Content="Mute on Startup" Margin="0,0,0,10" />
-                    <CheckBox x:Name="MinimizeToTrayOnStartupCheckBox" Content="Start minimized to tray" Margin="0,0,0,10" />
-                    <CheckBox x:Name="AutostartEnabledCheckBox" Content="Start with Windows" Margin="0,0,0,10" />
-                    <CheckBox x:Name="AutoplayEnabledCheckBox" Content="Autoplay on startup" Margin="0,0,0,10" />
+                    <CheckBox x:Name="LoopEnabledCheckBox" Content="{DynamicResource Text.LoopEnabled}" Margin="0,0,0,10" />
+                    <CheckBox x:Name="FullscreenOnStartCheckBox" Content="{DynamicResource Text.FullscreenOnStart}" Margin="0,0,0,10" />
+                    <CheckBox x:Name="MuteOnStartupCheckBox" Content="{DynamicResource Text.MuteOnStartup}" Margin="0,0,0,10" />
+                    <CheckBox x:Name="MinimizeToTrayOnStartupCheckBox" Content="{DynamicResource Text.MinimizeToTrayOnStartup}" Margin="0,0,0,10" />
+                    <CheckBox x:Name="TrayCloseHintEnabledCheckBox" Content="{DynamicResource Text.TrayCloseHintEnabled}" Margin="0,0,0,10" />
+                    <CheckBox x:Name="AutostartEnabledCheckBox" Content="{DynamicResource Text.AutostartEnabled}" Margin="0,0,0,10" />
+                    <CheckBox x:Name="AutoplayEnabledCheckBox" Content="{DynamicResource Text.AutoplayEnabled}" Margin="0,0,0,10" />
                     
                     <Grid Margin="0,0,0,12">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="180" />
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Text="Autoplay delay (seconds)" VerticalAlignment="Center" Foreground="{DynamicResource Brush.TextMuted}" />
+                        <TextBlock Grid.Column="0" Text="{DynamicResource Text.AutoplayDelay}" VerticalAlignment="Center" Foreground="{DynamicResource Brush.TextMuted}" />
                         <TextBox Grid.Column="1" x:Name="AutoplayDelayTextBox" Width="120" HorizontalAlignment="Left" />
                     </Grid>
                     
@@ -67,7 +76,7 @@
                             <ColumnDefinition Width="180" />
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Text="Volume" VerticalAlignment="Center" Foreground="{DynamicResource Brush.TextMuted}" />
+                        <TextBlock Grid.Column="0" Text="{DynamicResource Text.Volume}" VerticalAlignment="Center" Foreground="{DynamicResource Brush.TextMuted}" />
                         <StackPanel Grid.Column="1" Orientation="Horizontal">
                             <Slider x:Name="VolumeSlider" Width="200" Minimum="0" Maximum="100" VerticalAlignment="Center" Margin="0,0,10,0" />
                             <TextBlock x:Name="VolumeLabel" Text="50%" VerticalAlignment="Center" MinWidth="40" />
@@ -79,7 +88,7 @@
                             <ColumnDefinition Width="180" />
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Text="Scaling Mode" VerticalAlignment="Center" Foreground="{DynamicResource Brush.TextMuted}" />
+                        <TextBlock Grid.Column="0" Text="{DynamicResource Text.ScalingMode}" VerticalAlignment="Center" Foreground="{DynamicResource Brush.TextMuted}" />
                         <ComboBox Grid.Column="1" x:Name="ScalingModeComboBox" Width="200" HorizontalAlignment="Left" />
                     </Grid>
                 </StackPanel>
@@ -91,7 +100,7 @@
                     CornerRadius="8" 
                     Padding="20">
                 <StackPanel>
-                    <TextBlock Text="About" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,12" />
+                    <TextBlock Text="{DynamicResource Text.About}" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,12" />
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="180" />
@@ -102,10 +111,10 @@
                             <RowDefinition Height="Auto" />
                         </Grid.RowDefinitions>
                         
-                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Version" Foreground="{DynamicResource Brush.TextMuted}" Margin="0,0,0,8" />
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="{DynamicResource Text.Version}" Foreground="{DynamicResource Brush.TextMuted}" Margin="0,0,0,8" />
                         <TextBlock Grid.Row="0" Grid.Column="1" Text="0.1.0" Margin="0,0,0,8" />
                         
-                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Application" Foreground="{DynamicResource Brush.TextMuted}" />
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="{DynamicResource Text.Application}" Foreground="{DynamicResource Brush.TextMuted}" />
                         <TextBlock Grid.Row="1" Grid.Column="1" Text="Snowblind-Mod Player" />
                     </Grid>
                 </StackPanel>
@@ -118,18 +127,18 @@
                     Padding="20" 
                     Margin="0,0,0,16">
                 <StackPanel>
-                    <TextBlock Text="Logging" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,12" />
+                    <TextBlock Text="{DynamicResource Text.Logging}" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,12" />
                     
                     <Grid Margin="0,0,0,12">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="180" />
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Text="Log Level" VerticalAlignment="Center" Foreground="{DynamicResource Brush.TextMuted}" />
+                        <TextBlock Grid.Column="0" Text="{DynamicResource Text.LogLevel}" VerticalAlignment="Center" Foreground="{DynamicResource Brush.TextMuted}" />
                         <ComboBox Grid.Column="1" x:Name="LogLevelComboBox" Width="200" HorizontalAlignment="Left" />
                     </Grid>
                     
-                    <TextBlock Text="Changes take effect immediately" FontSize="11" Foreground="{DynamicResource Brush.TextMuted}" FontStyle="Italic" />
+                    <TextBlock Text="{DynamicResource Text.LogChangesImmediate}" FontSize="11" Foreground="{DynamicResource Brush.TextMuted}" FontStyle="Italic" />
                 </StackPanel>
             </Border>
 

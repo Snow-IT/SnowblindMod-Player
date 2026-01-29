@@ -107,9 +107,9 @@
 
                 <!-- Caption buttons -->
                 <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Stretch">
-                    <Button x:Name="MinimizeButton" Style="{StaticResource CaptionButton}" Content="&#xE921;" ToolTip="Minimize" Click="MinimizeButton_Click" shell:WindowChrome.IsHitTestVisibleInChrome="True" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" />
-                    <Button x:Name="MaxRestoreButton" Style="{StaticResource CaptionButton}" Content="&#xE922;" ToolTip="Maximize" Click="MaxRestoreButton_Click" shell:WindowChrome.IsHitTestVisibleInChrome="True" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" />
-                    <Button x:Name="CloseButton" Style="{StaticResource CaptionCloseButton}" Content="&#xE8BB;" ToolTip="Close" Click="CloseButton_Click" shell:WindowChrome.IsHitTestVisibleInChrome="True" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" />
+                    <Button x:Name="MinimizeButton" Style="{StaticResource CaptionButton}" Content="&#xE921;" ToolTip="{DynamicResource Tooltip.Minimize}" Click="MinimizeButton_Click" shell:WindowChrome.IsHitTestVisibleInChrome="True" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" />
+                    <Button x:Name="MaxRestoreButton" Style="{StaticResource CaptionButton}" Content="&#xE922;" ToolTip="{DynamicResource Tooltip.Maximize}" Click="MaxRestoreButton_Click" shell:WindowChrome.IsHitTestVisibleInChrome="True" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" />
+                    <Button x:Name="CloseButton" Style="{StaticResource CaptionCloseButton}" Content="&#xE8BB;" ToolTip="{DynamicResource Tooltip.Close}" Click="CloseButton_Click" shell:WindowChrome.IsHitTestVisibleInChrome="True" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" />
                 </StackPanel>
             </Grid>
         </Border>
@@ -121,7 +121,7 @@
                 <Button DockPanel.Dock="Top" Style="{StaticResource IconButton}" 
                         Content="{StaticResource IconMenu}" 
                         Command="{Binding ToggleSidebarCommand}"
-                        ToolTip="Toggle sidebar"
+                        ToolTip="{DynamicResource Tooltip.ToggleSidebar}"
                         HorizontalAlignment="Left"
                         Margin="4,40,0,10"
                         FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" />
@@ -133,7 +133,7 @@
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="{StaticResource IconSettings}" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" 
                                    FontSize="16" VerticalAlignment="Center" Margin="0,0,10,0" />
-                        <TextBlock Text="Settings" VerticalAlignment="Center">
+                        <TextBlock Text="{DynamicResource Text.Settings}" VerticalAlignment="Center">
                             <TextBlock.Style>
                                 <Style TargetType="TextBlock">
                                     <Style.Triggers>
@@ -155,7 +155,7 @@
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="{StaticResource IconVideo}" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" 
                                        FontSize="16" Width="26" Margin="0,0,10,0" VerticalAlignment="Center" TextAlignment="Center" LineHeight="18" />
-                            <TextBlock Text="Videos" VerticalAlignment="Center">
+                            <TextBlock Text="{DynamicResource Text.Videos}" VerticalAlignment="Center">
                                 <TextBlock.Style>
                                     <Style TargetType="TextBlock">
                                         <Style.Triggers>
@@ -176,7 +176,7 @@
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="{StaticResource IconLog}" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" 
                                        FontSize="16" Width="26" Margin="0,0,10,0" VerticalAlignment="Center" TextAlignment="Center" LineHeight="18" />
-                            <TextBlock Text="Logs" VerticalAlignment="Center">
+                            <TextBlock Text="{DynamicResource Text.Logs}" VerticalAlignment="Center">
                                 <TextBlock.Style>
                                     <Style TargetType="TextBlock">
                                         <Style.Triggers>

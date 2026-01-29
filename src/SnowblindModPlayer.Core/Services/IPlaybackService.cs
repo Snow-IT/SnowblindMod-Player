@@ -25,5 +25,4 @@ public interface IPlaybackService
     event EventHandler? PlayingStateChanged;
     event EventHandler? PlaybackPositionChanged;
     event EventHandler? VolumeChanged;
-    event EventHandler? MediaEnded;
 }

@@ -10,7 +10,6 @@ public static class SettingsServiceExtensions
     private const string VolumeKey = "Volume";
     private const string MutedKey = "Muted";
     private const string LoopEnabledKey = "LoopEnabled";
-    private const string FillScreenKey = "FillScreen";
     private const string FullscreenOnStartKey = "FullscreenOnStart";
     private const string ScalingModeKey = "ScalingMode";
     private const string ThemePreferenceKey = "ThemePreference";
@@ -67,7 +66,7 @@ public static class SettingsServiceExtensions
 
     public static bool GetMuted(this ISettingsService settings)
     {
-        return settings.Get(MutedKey, false);
+        return settings.Get(MutedKey, true);
     }
 
     public static void SetMuted(this ISettingsService settings, bool muted)
@@ -85,15 +84,6 @@ public static class SettingsServiceExtensions
         settings.Set(LoopEnabledKey, enabled);
     }
 
-    public static bool GetFillScreen(this ISettingsService settings)
-    {
-        return settings.Get(FillScreenKey, true);
-    }
-
-    public static void SetFillScreen(this ISettingsService settings, bool fill)
-    {
-        settings.Set(FillScreenKey, fill);
-    }
 
     public static string GetThemePreference(this ISettingsService settings)
     {
@@ -107,7 +97,7 @@ public static class SettingsServiceExtensions
 
     public static string GetVideosViewMode(this ISettingsService settings)
     {
-        return settings.Get(VideosViewModeKey, "Tile");
+        return settings.Get(VideosViewModeKey, "List");
     }
 
     public static void SetVideosViewMode(this ISettingsService settings, string mode)
@@ -153,7 +143,7 @@ public static class SettingsServiceExtensions
 
     public static bool GetAutoplayEnabled(this ISettingsService settings)
     {
-        return settings.Get(AutoplayEnabledKey, false);
+        return settings.Get(AutoplayEnabledKey, true);
     }
 
     public static void SetAutoplayEnabled(this ISettingsService settings, bool enabled)
@@ -173,7 +163,7 @@ public static class SettingsServiceExtensions
 
     public static string GetLoggingLevel(this ISettingsService settings)
     {
-        return settings.Get(LoggingLevelKey, "Warn");
+        return settings.Get(LoggingLevelKey, "Warning");
     }
 
     public static void SetLoggingLevel(this ISettingsService settings, string level)
@@ -193,7 +183,7 @@ public static class SettingsServiceExtensions
 
     public static bool GetSidebarCollapsed(this ISettingsService settings)
     {
-        return settings.Get(SidebarCollapsedKey, false);
+        return settings.Get(SidebarCollapsedKey, true);
     }
 
     public static void SetSidebarCollapsed(this ISettingsService settings, bool collapsed)

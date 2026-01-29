@@ -5,7 +5,6 @@ namespace SnowblindModPlayer.Infrastructure.Data;
 public class LibraryDbContext
 {
     private readonly string _databasePath;
-    private SqliteConnection? _connection;
 
     public LibraryDbContext(string databasePath)
     {

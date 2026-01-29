@@ -4,7 +4,7 @@
              Background="Transparent">
     <Border Padding="0">
         <StackPanel Orientation="Vertical">
-            <TextBlock Text="Select Monitor for Fullscreen Display"
+            <TextBlock Text="{DynamicResource Text.SelectMonitorHeader}"
                        FontSize="14" FontWeight="SemiBold" Margin="0,0,0,12" Foreground="{DynamicResource Brush.TextMuted}"/>
 
             <!-- Monitor Layout Canvas -->
@@ -14,22 +14,31 @@
 
             <!-- Selected Monitor Info -->
             <StackPanel Orientation="Vertical" Margin="0,0,0,10">
-                <TextBlock Text="Selected Monitor:" FontWeight="SemiBold" Margin="0,0,0,6"/>
+                <TextBlock Text="{DynamicResource Text.SelectedMonitor}" FontWeight="SemiBold" Margin="0,0,0,6"/>
                 <Border Background="{DynamicResource Brush.Panel}" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1" Padding="12" CornerRadius="8">
                     <StackPanel Orientation="Vertical">
-                        <TextBlock Text="{Binding SelectedMonitor.DisplayName, FallbackValue='No monitor selected'}"
-                                   FontSize="14" FontWeight="SemiBold"/>
+                        <TextBlock Text="{Binding SelectedMonitor.DisplayName}" FontSize="14" FontWeight="SemiBold">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding SelectedMonitor}" Value="{x:Null}">
+                                            <Setter Property="Text" Value="{DynamicResource Text.NoMonitorSelected}" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
                         <TextBlock Margin="5,5,0,0">
-                            <Run Text="Position: "/><Run Text="{Binding SelectedMonitor.X, FallbackValue='-'}"/><Run Text=", "/><Run Text="{Binding SelectedMonitor.Y, FallbackValue='-'}"/>
+                            <Run Text="{DynamicResource Text.MonitorPosition}"/><Run Text=" "/><Run Text="{Binding SelectedMonitor.X, FallbackValue='-'}"/><Run Text=", "/><Run Text="{Binding SelectedMonitor.Y, FallbackValue='-'}"/>
                         </TextBlock>
                         <TextBlock Margin="5,2,0,0">
-                            <Run Text="Resolution: "/><Run Text="{Binding SelectedMonitor.Width, FallbackValue='-'}"/><Run Text="x"/><Run Text="{Binding SelectedMonitor.Height, FallbackValue='-'}"/>
+                            <Run Text="{DynamicResource Text.MonitorResolution}"/><Run Text=" "/><Run Text="{Binding SelectedMonitor.Width, FallbackValue='-'}"/><Run Text="x"/><Run Text="{Binding SelectedMonitor.Height, FallbackValue='-'}"/>
                         </TextBlock>
                     </StackPanel>
                 </Border>
             </StackPanel>
 
-            <TextBlock Text="Available Monitors:" FontWeight="SemiBold" Margin="0,16,0,10"/>
+            <TextBlock Text="{DynamicResource Text.AvailableMonitors}" FontWeight="SemiBold" Margin="0,16,0,10"/>
 
             <!-- Monitor List -->
             <ItemsControl ItemsSource="{Binding AvailableMonitors}" HorizontalAlignment="Left">

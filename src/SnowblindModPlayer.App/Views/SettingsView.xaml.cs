@@ -4,6 +4,7 @@ using SnowblindModPlayer.Core.Services;
 using SnowblindModPlayer.Infrastructure.Services;
 using SnowblindModPlayer.Services;
 using SnowblindModPlayer.UI.ViewModels;
+using System.Windows;
 
 namespace SnowblindModPlayer.Views;
 
@@ -33,6 +34,16 @@ public partial class SettingsView : UserControl
         ThemePreferenceComboBox.SelectedItem = _settingsService.GetThemePreference();
         ThemePreferenceComboBox.SelectionChanged += ThemePreferenceComboBox_SelectionChanged;
 
+        LoadLanguageOptions();
+        LanguageModeComboBox.SelectionChanged += (s, e) =>
+        {
+            if (LanguageModeComboBox.SelectedValue is not string mode)
+                return;
+            OnSettingsChanged(() => _settingsService.SetLanguageMode(mode));
+            LocalizationService.ApplyLanguage(App.Current, _settingsService);
+            LoadLanguageOptions();
+        };
+
         // Playback settings
         LoopEnabledCheckBox.IsChecked = _settingsService.GetLoopEnabled();
         LoopEnabledCheckBox.Checked += (s, e) => OnSettingsChanged(() => _settingsService.SetLoopEnabled(true));
@@ -57,6 +68,10 @@ public partial class SettingsView : UserControl
         MinimizeToTrayOnStartupCheckBox.IsChecked = _settingsService.GetMinimizeToTrayOnStartup();
         MinimizeToTrayOnStartupCheckBox.Checked += (s, e) => OnSettingsChanged(() => _settingsService.SetMinimizeToTrayOnStartup(true));
         MinimizeToTrayOnStartupCheckBox.Unchecked += (s, e) => OnSettingsChanged(() => _settingsService.SetMinimizeToTrayOnStartup(false));
+
+        TrayCloseHintEnabledCheckBox.IsChecked = _settingsService.GetTrayCloseHintEnabled();
+        TrayCloseHintEnabledCheckBox.Checked += (s, e) => OnSettingsChanged(() => _settingsService.SetTrayCloseHintEnabled(true));
+        TrayCloseHintEnabledCheckBox.Unchecked += (s, e) => OnSettingsChanged(() => _settingsService.SetTrayCloseHintEnabled(false));
 
         AutostartEnabledCheckBox.IsChecked = _settingsService.GetAutostartEnabled();
         AutostartEnabledCheckBox.Checked += async (s, e) => await SetAutostartAsync(true);
@@ -102,7 +117,36 @@ public partial class SettingsView : UserControl
                     ThemePreferenceComboBox.SelectedItem = pref;
             });
         });
+
+        _settingsService.RegisterLiveUpdate<string>("LanguageMode", mode =>
+        {
+            Dispatcher.Invoke(() =>
+            {
+                if (LanguageModeComboBox.SelectedValue as string != mode)
+                    LanguageModeComboBox.SelectedValue = mode;
+            });
+        });
     }
+
+    private void LoadLanguageOptions()
+    {
+        LanguageModeComboBox.DisplayMemberPath = "Display";
+        LanguageModeComboBox.SelectedValuePath = "Value";
+
+        var systemText = (string)(Application.Current.Resources["Text.LanguageSystem"] ?? "System");
+        var englishText = (string)(Application.Current.Resources["Text.LanguageEnglish"] ?? "English");
+        var germanText = (string)(Application.Current.Resources["Text.LanguageGerman"] ?? "German");
+
+        LanguageModeComboBox.ItemsSource = new[]
+        {
+            new LanguageOption("System", systemText),
+            new LanguageOption("English", englishText),
+            new LanguageOption("German", germanText)
+        };
+        LanguageModeComboBox.SelectedValue = _settingsService.GetLanguageMode();
+    }
+
+    private record LanguageOption(string Value, string Display);
 
     private async Task SetAutostartAsync(bool enabled)
     {

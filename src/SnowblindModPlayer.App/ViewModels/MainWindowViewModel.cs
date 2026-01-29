@@ -4,6 +4,7 @@ using SnowblindModPlayer.Services;
 using SnowblindModPlayer.UI.MVVM;
 using SnowblindModPlayer.Views;
 using SnowblindModPlayer.ViewModels;
+using System.Windows;
 
 namespace SnowblindModPlayer.ViewModels;
 
@@ -93,6 +94,7 @@ public class MainWindowViewModel : ViewModelBase
         NavigateSettingsCommand = new RelayCommand(_ => SelectedPage = "Settings");
         ToggleSidebarCommand = new RelayCommand(_ => SidebarCollapsed = !SidebarCollapsed);
 
+        _settingsService.RegisterLiveUpdate<string>("LanguageMode", _ => UpdateCurrentView());
         UpdateCurrentView();
     }
 
@@ -105,7 +107,12 @@ public class MainWindowViewModel : ViewModelBase
             _ => _videosView,
         };
 
-        PageTitle = SelectedPage;
+        PageTitle = SelectedPage switch
+        {
+            "Logs" => Application.Current.Resources["Text.Logs"] as string ?? "Logs",
+            "Settings" => Application.Current.Resources["Text.Settings"] as string ?? "Settings",
+            _ => Application.Current.Resources["Text.Videos"] as string ?? "Videos"
+        };
         CommandBarContent = CommandBarFactory.CreateForPage(SelectedPage, CurrentView);
     }
 }

@@ -61,8 +61,10 @@ public partial class MonitorSelectionView : UserControl
             {
                 Width = width,
                 Height = height,
-                Fill = _viewModel.SelectedMonitor?.Id == monitor.Id ? new SolidColorBrush(Color.FromRgb(0, 120, 212)) : new SolidColorBrush(Colors.LightGray),
-                Stroke = new SolidColorBrush(Colors.Black),
+                Fill = _viewModel.SelectedMonitor?.Id == monitor.Id
+                    ? (Brush)(Application.Current.Resources["Brush.Accent"] ?? new SolidColorBrush(Color.FromRgb(0, 120, 212)))
+                    : new SolidColorBrush((Color)(Application.Current.Resources["App.Panel2"] ?? Colors.LightGray)),
+                Stroke = new SolidColorBrush((Color)(Application.Current.Resources["App.Border"] ?? Colors.Black)),
                 StrokeThickness = 2,
                 Cursor = Cursors.Hand
             };
@@ -81,7 +83,9 @@ public partial class MonitorSelectionView : UserControl
             var label = new TextBlock
             {
                 Text = monitor.DisplayName,
-                Foreground = _viewModel.SelectedMonitor?.Id == monitor.Id ? Brushes.White : Brushes.Black,
+                Foreground = _viewModel.SelectedMonitor?.Id == monitor.Id
+                    ? (Brush)(Application.Current.Resources["Brush.Text"] ?? Brushes.White)
+                    : (Brush)(Application.Current.Resources["Brush.Text"] ?? Brushes.Black),
                 FontSize = 12,
                 FontWeight = FontWeights.Bold,
                 TextAlignment = TextAlignment.Center,

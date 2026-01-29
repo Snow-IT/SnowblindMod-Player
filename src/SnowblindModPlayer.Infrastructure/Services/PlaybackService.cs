@@ -26,7 +26,6 @@ public class PlaybackService : IPlaybackService
     public event EventHandler? PlayingStateChanged;
     public event EventHandler? PlaybackPositionChanged;
     public event EventHandler? VolumeChanged;
-    public event EventHandler? MediaEnded;
     public event EventHandler? MediaEndReached;  // Exposed for external loop handling
 
     public LibVLCSharp.Shared.MediaPlayer MediaPlayer => _mediaPlayer;
@@ -103,9 +102,6 @@ public class PlaybackService : IPlaybackService
             LoadMedia(videoPath);
             _mediaPlayer.Play();
             
-            // FORCE STRETCH after play - these work directly on MediaPlayer
-            _mediaPlayer.AspectRatio = null;  // null = fill window
-            _mediaPlayer.Scale = 0;           // 0 = fit to window
         }
         catch (Exception ex)
         {

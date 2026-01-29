@@ -28,7 +28,7 @@ public static class CommandBarFactory
         var addBtn = new Button
         {
             Content = new TextBlock { Text = "\uE710", FontFamily = iconFont, FontSize = 16 },
-            ToolTip = "Add video",
+            ToolTip = Application.Current.Resources["Tooltip.AddVideo"] as string ?? "Add video",
             Style = (Style)Application.Current.FindResource("IconButton"),
             Margin = new Thickness(0, 0, 8, 0),
             Command = vm.ImportCommand
@@ -37,7 +37,7 @@ public static class CommandBarFactory
         var delBtn = new Button
         {
             Content = new TextBlock { Text = "\uE74D", FontFamily = iconFont, FontSize = 16 },
-            ToolTip = "Remove selected video",
+            ToolTip = Application.Current.Resources["Tooltip.RemoveVideo"] as string ?? "Remove selected video",
             Style = (Style)Application.Current.FindResource("IconButton"),
             Margin = new Thickness(0, 0, 8, 0),
             Command = vm.RemoveCommand
@@ -46,7 +46,7 @@ public static class CommandBarFactory
         var starBtn = new Button
         {
             Content = new TextBlock { Text = "\uE734", FontFamily = iconFont, FontSize = 16 },
-            ToolTip = "Set as default video",
+            ToolTip = Application.Current.Resources["Tooltip.SetDefaultVideo"] as string ?? "Set as default video",
             Style = (Style)Application.Current.FindResource("IconButton"),
             Command = vm.SetDefaultCommand
         };
@@ -66,7 +66,7 @@ public static class CommandBarFactory
         var refreshBtn = new Button
         {
             Content = new TextBlock { Text = "\uE72C", FontFamily = iconFont, FontSize = 16 },
-            ToolTip = "Refresh logs",
+            ToolTip = Application.Current.Resources["Tooltip.RefreshLogs"] as string ?? "Refresh logs",
             Style = (Style)Application.Current.FindResource("IconButton"),
             Margin = new Thickness(0, 0, 8, 0)
         };
@@ -74,7 +74,7 @@ public static class CommandBarFactory
         var clearBtn = new Button
         {
             Content = new TextBlock { Text = "\uE74D", FontFamily = iconFont, FontSize = 16 },
-            ToolTip = "Clear logs",
+            ToolTip = Application.Current.Resources["Tooltip.ClearLogs"] as string ?? "Clear logs",
             Style = (Style)Application.Current.FindResource("IconButton"),
             Margin = new Thickness(0, 0, 8, 0)
         };
@@ -82,7 +82,7 @@ public static class CommandBarFactory
         var folderBtn = new Button
         {
             Content = new TextBlock { Text = "\uED25", FontFamily = iconFont, FontSize = 16 },
-            ToolTip = "Open logs folder",
+            ToolTip = Application.Current.Resources["Tooltip.OpenLogsFolder"] as string ?? "Open logs folder",
             Style = (Style)Application.Current.FindResource("IconButton")
         };
 

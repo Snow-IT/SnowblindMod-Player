@@ -138,6 +138,7 @@ namespace SnowblindModPlayer
                             {
                                 System.Diagnostics.Debug.WriteLine("Applying theme...");
                                 ThemeService.ApplyTheme(this, ThemeService.ResolveIsLightTheme(settingsService));
+                                LocalizationService.ApplyLanguage(this, settingsService);
                                 System.Diagnostics.Debug.WriteLine("? Theme applied");
 
                                 System.Diagnostics.Debug.WriteLine("Creating main window...");
@@ -463,10 +464,11 @@ namespace SnowblindModPlayer
             try
             {
                 var notifier = _serviceProvider?.GetRequiredService<INotificationOrchestrator>();
-                if (notifier != null)
+                var settings = _serviceProvider?.GetRequiredService<ISettingsService>();
+                if (notifier != null && (settings?.GetTrayCloseHintEnabled() ?? true))
                 {
                     await notifier.NotifyAsync(
-                        "Application minimized to tray",
+                        (Application.Current.Resources["Text.MinimizedToTray"] as string) ?? "Application minimized to tray",
                         NotificationScenario.MinimizeToTray,
                         NotificationType.Info);
                 }

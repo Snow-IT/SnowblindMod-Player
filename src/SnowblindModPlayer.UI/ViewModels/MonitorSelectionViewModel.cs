@@ -33,7 +33,9 @@ public class MonitorSelectionViewModel : ViewModelBase
                 
                 // Notify user
                 _ = _notifier.NotifyAsync(
-                    $"Display set to: {value.DisplayName}",
+                    string.Format(
+                        (System.Windows.Application.Current.Resources["Text.DisplaySetTo"] as string) ?? "Display set to: {0}",
+                        value.DisplayName),
                     NotificationScenario.SettingsSaved,
                     NotificationType.Info);
             }

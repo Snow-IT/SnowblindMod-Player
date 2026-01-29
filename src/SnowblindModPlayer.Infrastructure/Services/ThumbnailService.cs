@@ -2,10 +2,12 @@ using LibVLCSharp.Shared;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
+using System.Runtime.Versioning;
 using SnowblindModPlayer.Core.Services;
 
 namespace SnowblindModPlayer.Infrastructure.Services;
 
+[SupportedOSPlatform("windows")]
 public class ThumbnailService : IThumbnailService
 {
     private const int ThumbnailWidth = 320;
@@ -46,7 +48,7 @@ public class ThumbnailService : IThumbnailService
             }
 
             // Ensure output directory exists
-            string outputDir = Path.GetDirectoryName(outputPath);
+            var outputDir = Path.GetDirectoryName(outputPath);
             if (!string.IsNullOrEmpty(outputDir))
             {
                 Directory.CreateDirectory(outputDir);

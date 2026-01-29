@@ -1,8 +1,10 @@
 using System.Diagnostics;
+using System.Runtime.Versioning;
 using SnowblindModPlayer.Core.Services;
 
 namespace SnowblindModPlayer.Infrastructure.Services;
 
+[SupportedOSPlatform("windows")]
 public class TaskSchedulerAutostartService : IAutostartService
 {
     private const string TaskName = "SnowblindModPlayer";
@@ -18,7 +20,7 @@ public class TaskSchedulerAutostartService : IAutostartService
         try
         {
             var task = GetTask();
-            return task != null && task.Enabled == true;
+            return task?.Enabled == true;
         }
         catch (Exception ex)
         {

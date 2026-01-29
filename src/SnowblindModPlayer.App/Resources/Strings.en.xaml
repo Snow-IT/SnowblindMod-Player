@@ -1,0 +1,50 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <sys:String x:Key="Text.Appearance" xmlns:sys="clr-namespace:System;assembly=mscorlib">Appearance</sys:String>
+    <sys:String x:Key="Text.Theme" xmlns:sys="clr-namespace:System;assembly=mscorlib">Theme</sys:String>
+    <sys:String x:Key="Text.LanguageMode" xmlns:sys="clr-namespace:System;assembly=mscorlib">Language Mode</sys:String>
+    <sys:String x:Key="Text.Display" xmlns:sys="clr-namespace:System;assembly=mscorlib">Display</sys:String>
+    <sys:String x:Key="Text.MonitorSelection" xmlns:sys="clr-namespace:System;assembly=mscorlib">Monitor Selection</sys:String>
+    <sys:String x:Key="Text.Playback" xmlns:sys="clr-namespace:System;assembly=mscorlib">Playback</sys:String>
+    <sys:String x:Key="Text.LoopEnabled" xmlns:sys="clr-namespace:System;assembly=mscorlib">Enable Loop Playback</sys:String>
+    <sys:String x:Key="Text.FullscreenOnStart" xmlns:sys="clr-namespace:System;assembly=mscorlib">Start in Fullscreen</sys:String>
+    <sys:String x:Key="Text.MuteOnStartup" xmlns:sys="clr-namespace:System;assembly=mscorlib">Mute on Startup</sys:String>
+    <sys:String x:Key="Text.MinimizeToTrayOnStartup" xmlns:sys="clr-namespace:System;assembly=mscorlib">Start minimized to tray</sys:String>
+    <sys:String x:Key="Text.TrayCloseHintEnabled" xmlns:sys="clr-namespace:System;assembly=mscorlib">Show tray close hint</sys:String>
+    <sys:String x:Key="Text.AutostartEnabled" xmlns:sys="clr-namespace:System;assembly=mscorlib">Start with Windows</sys:String>
+    <sys:String x:Key="Text.AutoplayEnabled" xmlns:sys="clr-namespace:System;assembly=mscorlib">Autoplay on startup</sys:String>
+    <sys:String x:Key="Text.AutoplayDelay" xmlns:sys="clr-namespace:System;assembly=mscorlib">Autoplay delay (seconds)</sys:String>
+    <sys:String x:Key="Text.Volume" xmlns:sys="clr-namespace:System;assembly=mscorlib">Volume</sys:String>
+    <sys:String x:Key="Text.ScalingMode" xmlns:sys="clr-namespace:System;assembly=mscorlib">Scaling Mode</sys:String>
+    <sys:String x:Key="Text.About" xmlns:sys="clr-namespace:System;assembly=mscorlib">About</sys:String>
+    <sys:String x:Key="Text.Version" xmlns:sys="clr-namespace:System;assembly=mscorlib">Version</sys:String>
+    <sys:String x:Key="Text.Application" xmlns:sys="clr-namespace:System;assembly=mscorlib">Application</sys:String>
+    <sys:String x:Key="Text.Logging" xmlns:sys="clr-namespace:System;assembly=mscorlib">Logging</sys:String>
+    <sys:String x:Key="Text.LogLevel" xmlns:sys="clr-namespace:System;assembly=mscorlib">Log Level</sys:String>
+    <sys:String x:Key="Text.LogChangesImmediate" xmlns:sys="clr-namespace:System;assembly=mscorlib">Changes take effect immediately</sys:String>
+    <sys:String x:Key="Text.MinimizedToTray" xmlns:sys="clr-namespace:System;assembly=mscorlib">Application minimized to tray</sys:String>
+    <sys:String x:Key="Text.LanguageSystem" xmlns:sys="clr-namespace:System;assembly=mscorlib">System</sys:String>
+    <sys:String x:Key="Text.LanguageEnglish" xmlns:sys="clr-namespace:System;assembly=mscorlib">English</sys:String>
+    <sys:String x:Key="Text.LanguageGerman" xmlns:sys="clr-namespace:System;assembly=mscorlib">German</sys:String>
+    <sys:String x:Key="Text.Videos" xmlns:sys="clr-namespace:System;assembly=mscorlib">Videos</sys:String>
+    <sys:String x:Key="Text.Logs" xmlns:sys="clr-namespace:System;assembly=mscorlib">Logs</sys:String>
+    <sys:String x:Key="Text.Settings" xmlns:sys="clr-namespace:System;assembly=mscorlib">Settings</sys:String>
+    <sys:String x:Key="Text.AddedFormat" xmlns:sys="clr-namespace:System;assembly=mscorlib">Added: {0:yyyy-MM-dd HH:mm:ss}</sys:String>
+    <sys:String x:Key="Text.DisplaySetTo" xmlns:sys="clr-namespace:System;assembly=mscorlib">Display set to: {0}</sys:String>
+    <sys:String x:Key="Tooltip.ToggleSidebar" xmlns:sys="clr-namespace:System;assembly=mscorlib">Toggle sidebar</sys:String>
+    <sys:String x:Key="Tooltip.Minimize" xmlns:sys="clr-namespace:System;assembly=mscorlib">Minimize</sys:String>
+    <sys:String x:Key="Tooltip.Maximize" xmlns:sys="clr-namespace:System;assembly=mscorlib">Maximize</sys:String>
+    <sys:String x:Key="Tooltip.Close" xmlns:sys="clr-namespace:System;assembly=mscorlib">Close</sys:String>
+    <sys:String x:Key="Tooltip.AddVideo" xmlns:sys="clr-namespace:System;assembly=mscorlib">Add video</sys:String>
+    <sys:String x:Key="Tooltip.RemoveVideo" xmlns:sys="clr-namespace:System;assembly=mscorlib">Remove selected video</sys:String>
+    <sys:String x:Key="Tooltip.SetDefaultVideo" xmlns:sys="clr-namespace:System;assembly=mscorlib">Set as default video</sys:String>
+    <sys:String x:Key="Tooltip.RefreshLogs" xmlns:sys="clr-namespace:System;assembly=mscorlib">Refresh logs</sys:String>
+    <sys:String x:Key="Tooltip.ClearLogs" xmlns:sys="clr-namespace:System;assembly=mscorlib">Clear logs</sys:String>
+    <sys:String x:Key="Tooltip.OpenLogsFolder" xmlns:sys="clr-namespace:System;assembly=mscorlib">Open logs folder</sys:String>
+    <sys:String x:Key="Text.SelectMonitorHeader" xmlns:sys="clr-namespace:System;assembly=mscorlib">Select Monitor for Fullscreen Display</sys:String>
+    <sys:String x:Key="Text.SelectedMonitor" xmlns:sys="clr-namespace:System;assembly=mscorlib">Selected Monitor:</sys:String>
+    <sys:String x:Key="Text.AvailableMonitors" xmlns:sys="clr-namespace:System;assembly=mscorlib">Available Monitors:</sys:String>
+    <sys:String x:Key="Text.NoMonitorSelected" xmlns:sys="clr-namespace:System;assembly=mscorlib">No monitor selected</sys:String>
+    <sys:String x:Key="Text.MonitorPosition" xmlns:sys="clr-namespace:System;assembly=mscorlib">Position:</sys:String>
+    <sys:String x:Key="Text.MonitorResolution" xmlns:sys="clr-namespace:System;assembly=mscorlib">Resolution:</sys:String>
+</ResourceDictionary>

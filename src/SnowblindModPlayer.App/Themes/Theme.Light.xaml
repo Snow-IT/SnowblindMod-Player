@@ -24,6 +24,8 @@
     <Color x:Key="App.LogWarn">#C07A00</Color>
     <Color x:Key="App.LogError">#C50F1F</Color>
     <Color x:Key="App.LogCritical">#A80000</Color>
+    <Color x:Key="App.TooltipBg">#FFFFFF</Color>
+    <Color x:Key="App.TooltipText">#1F1F1F</Color>
 
     <SolidColorBrush x:Key="Brush.Bg0" Color="{StaticResource App.Bg0}" />
     <SolidColorBrush x:Key="Brush.Bg1" Color="{StaticResource App.Bg1}" />
@@ -47,5 +49,7 @@
     <SolidColorBrush x:Key="Brush.LogWarn" Color="{StaticResource App.LogWarn}" />
     <SolidColorBrush x:Key="Brush.LogError" Color="{StaticResource App.LogError}" />
     <SolidColorBrush x:Key="Brush.LogCritical" Color="{StaticResource App.LogCritical}" />
+    <SolidColorBrush x:Key="Brush.TooltipBg" Color="{StaticResource App.TooltipBg}" />
+    <SolidColorBrush x:Key="Brush.TooltipText" Color="{StaticResource App.TooltipText}" />
 
 </ResourceDictionary>

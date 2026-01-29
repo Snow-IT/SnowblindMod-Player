@@ -45,6 +45,8 @@ public partial class PlayerWindow : Window
         // Load settings
         LoadSettingsAsync();
 
+        SizeChanged += (_, _) => ApplyScalingMode();
+
         // Position window on selected monitor (or primary if none selected)
         PositionOnSelectedMonitor();
 
@@ -63,9 +65,51 @@ public partial class PlayerWindow : Window
         var muted = _settingsService.GetMuted();
         _viewModel.ScalingMode = _settingsService.GetScalingMode();
 
+        ApplyScalingMode();
+
         // Apply volume and mute
         await _playbackService.SetVolumeAsync(volume);
         await _playbackService.SetMuteAsync(muted);
+    }
+
+    private void ApplyScalingMode()
+    {
+        if (_playbackService is not PlaybackService svc)
+            return;
+
+        var mediaPlayer = svc.MediaPlayer;
+        var mode = _viewModel.ScalingMode;
+
+        if (string.Equals(mode, "Fill", StringComparison.OrdinalIgnoreCase))
+        {
+            var width = Math.Max(1, (int)ActualWidth);
+            var height = Math.Max(1, (int)ActualHeight);
+            var ratio = GetAspectRatio(width, height);
+            mediaPlayer.AspectRatio = ratio;
+            mediaPlayer.Scale = 0;
+        }
+        else
+        {
+            mediaPlayer.AspectRatio = null;
+            mediaPlayer.Scale = 0;
+        }
+    }
+
+    private static string GetAspectRatio(int width, int height)
+    {
+        var gcd = GreatestCommonDivisor(width, height);
+        return $"{width / gcd}:{height / gcd}";
+    }
+
+    private static int GreatestCommonDivisor(int a, int b)
+    {
+        while (b != 0)
+        {
+            var temp = b;
+            b = a % b;
+            a = temp;
+        }
+        return Math.Max(1, a);
     }
 
     private void PositionOnSelectedMonitor()
