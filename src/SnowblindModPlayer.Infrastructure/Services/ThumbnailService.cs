@@ -1,4 +1,7 @@
 using LibVLCSharp.Shared;
+using System.Drawing;
+using System.Drawing.Imaging;
+using System.Runtime.InteropServices;
 using SnowblindModPlayer.Core.Services;
 
 namespace SnowblindModPlayer.Infrastructure.Services;
@@ -136,26 +139,86 @@ public class ThumbnailService : IThumbnailService
 
             System.Diagnostics.Debug.WriteLine($"Extracting snapshot at {snapshotTimeMs}ms (5% of {durationMs}ms)");
 
-            // Take snapshot
-            mediaPlayer.Play();
+            var width = ThumbnailWidth;
+            var height = ThumbnailHeight;
+            var pitch = width * 4;
+            var buffer = new byte[pitch * height];
+            var handle = GCHandle.Alloc(buffer, GCHandleType.Pinned);
+            var bufferPtr = handle.AddrOfPinnedObject();
+            var frameTcs = new TaskCompletionSource<byte[]>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var timeReachedTcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var captureAllowed = false;
+            var targetPosition = durationMs > 0 ? (float)snapshotTimeMs / durationMs : 0.05f;
 
-            // Wait for playback to start and reach snapshot position
-            await Task.Delay(500, cancellationToken); // Let playback initialize
-            mediaPlayer.Time = snapshotTimeMs;
-            await Task.Delay(500, cancellationToken); // Let frame decode
-
-            cancellationToken.ThrowIfCancellationRequested();
-
-            // Save snapshot
-            bool success = mediaPlayer.TakeSnapshot(0, outputPath, ThumbnailWidth, ThumbnailHeight);
-
-            if (!success)
+            try
             {
-                System.Diagnostics.Debug.WriteLine($"VLC snapshot failed for: {videoPath}");
-                return false;
-            }
+                mediaPlayer.SetVideoFormat("RV32", (uint)width, (uint)height, (uint)pitch);
+                mediaPlayer.SetVideoCallbacks(
+                    (IntPtr opaque, IntPtr planes) =>
+                    {
+                        Marshal.WriteIntPtr(planes, bufferPtr);
+                        return IntPtr.Zero;
+                    },
+                    (IntPtr opaque, IntPtr picture, IntPtr planes) => { },
+                    (IntPtr opaque, IntPtr picture) =>
+                    {
+                        if (captureAllowed && !frameTcs.Task.IsCompleted)
+                        {
+                            var frameCopy = new byte[buffer.Length];
+                            Buffer.BlockCopy(buffer, 0, frameCopy, 0, buffer.Length);
+                            frameTcs.TrySetResult(frameCopy);
+                        }
+                    });
 
-            return true;
+                mediaPlayer.PositionChanged += (_, e) =>
+                {
+                    if (e.Position >= targetPosition)
+                    {
+                        captureAllowed = true;
+                        timeReachedTcs.TrySetResult(true);
+                    }
+                };
+
+                mediaPlayer.Play();
+                await Task.Delay(300, cancellationToken);
+                mediaPlayer.Position = targetPosition;
+
+                var timeReached = await Task.WhenAny(timeReachedTcs.Task, Task.Delay(2500, cancellationToken));
+                if (timeReached != timeReachedTcs.Task)
+                {
+                    System.Diagnostics.Debug.WriteLine($"VLC snapshot seek timeout: {videoPath}");
+                    return false;
+                }
+
+                var completed = await Task.WhenAny(frameTcs.Task, Task.Delay(1500, cancellationToken));
+                if (completed != frameTcs.Task)
+                {
+                    System.Diagnostics.Debug.WriteLine($"VLC snapshot timeout: {videoPath}");
+                    return false;
+                }
+
+                var frame = await frameTcs.Task;
+                using var bitmap = new Bitmap(width, height, PixelFormat.Format32bppRgb);
+                var rect = new Rectangle(0, 0, width, height);
+                var bmpData = bitmap.LockBits(rect, ImageLockMode.WriteOnly, bitmap.PixelFormat);
+                try
+                {
+                    Marshal.Copy(frame, 0, bmpData.Scan0, frame.Length);
+                }
+                finally
+                {
+                    bitmap.UnlockBits(bmpData);
+                }
+
+                bitmap.Save(outputPath, ImageFormat.Jpeg);
+                return true;
+            }
+            finally
+            {
+                mediaPlayer.Stop();
+                if (handle.IsAllocated)
+                    handle.Free();
+            }
         }
         catch (OperationCanceledException)
         {

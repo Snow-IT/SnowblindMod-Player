@@ -8,6 +8,7 @@ namespace SnowblindModPlayer.Core.Services;
 public interface ILibraryOrchestrator
 {
     // Events for library changes (UI + Tray subscribe to these)
+    event EventHandler<ImportProgressEventArgs>? ImportProgressChanged;
     event EventHandler<VideoImportedEventArgs>? VideoImported;
     event EventHandler<VideoRemovedEventArgs>? VideoRemoved;
     event EventHandler<DefaultVideoChangedEventArgs>? DefaultVideoChanged;

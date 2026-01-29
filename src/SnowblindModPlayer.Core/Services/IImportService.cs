@@ -2,6 +2,7 @@ namespace SnowblindModPlayer.Core.Services;
 
 public interface IImportService
 {
+    event EventHandler<ImportProgressEventArgs>? ProgressChanged;
     /// <summary>
     /// Imports one or more video files into the library.
     /// Performs validation, duplicate checking, file copying, and thumbnail generation.

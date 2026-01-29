@@ -7,6 +7,7 @@ Background="Transparent">
     <UserControl.Resources>
         <converters:ThumbnailPathToImageSourceConverter x:Key="ThumbnailConverter" />
         <converters:EqualsToVisibilityConverter x:Key="EqualsToVisibilityConverter" />
+        <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
         <DataTemplate x:Key="TileTemplate">
             <Border x:Name="TileRoot" Background="{DynamicResource Brush.Panel}" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1"
                     CornerRadius="10" Padding="12" Margin="0,0,12,12" Width="200">
@@ -99,6 +100,15 @@ Background="Transparent">
                 <TextBox Grid.Column="0" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" Height="36" VerticalContentAlignment="Center" />
                 <ComboBox Grid.Column="1" Width="140" Height="34" Margin="10,0,0,0" SelectedItem="{Binding ViewMode}" ItemsSource="{Binding ViewModes}" />
             </Grid>
+        </Border>
+
+        <Border Grid.Row="2" Background="{DynamicResource Brush.Panel}" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1"
+                Margin="16,0,16,12" Padding="12" CornerRadius="8"
+                Visibility="{Binding IsImporting, Converter={StaticResource BoolToVisibility}}">
+            <StackPanel>
+                <TextBlock Text="{Binding ImportStatus}" FontSize="12" Foreground="{DynamicResource Brush.TextMuted}" Margin="0,0,0,6" />
+                <ProgressBar Height="6" Minimum="0" Maximum="100" Value="{Binding ImportProgress}" />
+            </StackPanel>
         </Border>
 
         <Border Grid.Row="1" Background="Transparent" Padding="16">

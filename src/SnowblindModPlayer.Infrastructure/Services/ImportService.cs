@@ -9,6 +9,8 @@ public class ImportService : IImportService
     private readonly IThumbnailQueueService _thumbnailQueueService;
     private readonly IAppDataPathService _appDataPathService;
 
+    public event EventHandler<ImportProgressEventArgs>? ProgressChanged;
+
     public IReadOnlySet<string> SupportedExtensions { get; } = 
         new HashSet<string>(StringComparer.OrdinalIgnoreCase) { ".mp4", ".mkv", ".avi", ".mov", ".wmv", ".webm" };
 
@@ -59,6 +61,15 @@ public class ImportService : IImportService
         if (sourcePaths == null || sourcePaths.Length == 0)
             return importedMedia.AsReadOnly();
 
+        var total = sourcePaths.Length;
+        var processed = 0;
+        ProgressChanged?.Invoke(this, new ImportProgressEventArgs
+        {
+            Total = total,
+            Processed = processed,
+            Stage = ImportProgressStage.Starting
+        });
+
         var mediaFolder = _settingsService.GetMediaFolder();
         Directory.CreateDirectory(mediaFolder);
 
@@ -66,10 +77,28 @@ public class ImportService : IImportService
         {
             try
             {
+                ProgressChanged?.Invoke(this, new ImportProgressEventArgs
+                {
+                    Total = total,
+                    Processed = processed,
+                    CurrentPath = sourcePath,
+                    Stage = ImportProgressStage.Processing
+                });
+
+                await Task.Delay(1000);
                 // Step 1: Validate
                 if (!IsValidForImport(sourcePath))
                 {
                     System.Diagnostics.Debug.WriteLine($"Import validation failed for {sourcePath}");
+                    processed++;
+                    ProgressChanged?.Invoke(this, new ImportProgressEventArgs
+                    {
+                        Total = total,
+                        Processed = processed,
+                        CurrentPath = sourcePath,
+                        Stage = ImportProgressStage.Skipped,
+                        Message = "Invalid file"
+                    });
                     continue;
                 }
 
@@ -78,6 +107,15 @@ public class ImportService : IImportService
                 if (existingBySource != null)
                 {
                     System.Diagnostics.Debug.WriteLine($"Duplicate import attempt: {sourcePath} already exists");
+                    processed++;
+                    ProgressChanged?.Invoke(this, new ImportProgressEventArgs
+                    {
+                        Total = total,
+                        Processed = processed,
+                        CurrentPath = sourcePath,
+                        Stage = ImportProgressStage.Skipped,
+                        Message = "Duplicate"
+                    });
                     continue;
                 }
 
@@ -127,12 +165,47 @@ public class ImportService : IImportService
                 await _libraryService.AddMediaAsync(mediaItem);
                 importedMedia.Add(mediaItem);
                 System.Diagnostics.Debug.WriteLine($"Successfully imported: {mediaItem.DisplayName}");
+
+                processed++;
+                ProgressChanged?.Invoke(this, new ImportProgressEventArgs
+                {
+                    Total = total,
+                    Processed = processed,
+                    CurrentPath = sourcePath,
+                    Stage = ImportProgressStage.Imported
+                });
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Import failed for {sourcePath}: {ex.Message}");
+                processed++;
+                ProgressChanged?.Invoke(this, new ImportProgressEventArgs
+                {
+                    Total = total,
+                    Processed = processed,
+                    CurrentPath = sourcePath,
+                    Stage = ImportProgressStage.Failed,
+                    Message = ex.Message
+                });
             }
         }
+
+        ProgressChanged?.Invoke(this, new ImportProgressEventArgs
+        {
+            Total = total,
+            Processed = processed,
+            Stage = ImportProgressStage.GeneratingThumbnails,
+            Message = "Generating thumbnails..."
+        });
+
+        await _thumbnailQueueService.WaitForCompletionAsync();
+
+        ProgressChanged?.Invoke(this, new ImportProgressEventArgs
+        {
+            Total = total,
+            Processed = processed,
+            Stage = ImportProgressStage.Completed
+        });
 
         return importedMedia.AsReadOnly();
     }

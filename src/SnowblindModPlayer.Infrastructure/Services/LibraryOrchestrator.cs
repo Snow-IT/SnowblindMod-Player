@@ -17,6 +17,7 @@ public class LibraryOrchestrator : ILibraryOrchestrator
     public event EventHandler<VideoImportedEventArgs>? VideoImported;
     public event EventHandler<VideoRemovedEventArgs>? VideoRemoved;
     public event EventHandler<DefaultVideoChangedEventArgs>? DefaultVideoChanged;
+    public event EventHandler<ImportProgressEventArgs>? ImportProgressChanged;
 
     public LibraryOrchestrator(
         ILibraryService libraryService,
@@ -30,6 +31,8 @@ public class LibraryOrchestrator : ILibraryOrchestrator
         _notifier = notifier;
         _logger = logger;
         _changeNotifier = changeNotifier;
+
+        _importService.ProgressChanged += (s, e) => ImportProgressChanged?.Invoke(this, e);
     }
 
     public async Task<IReadOnlyList<MediaItem>> ImportVideosAsync(params string[] sourcePaths)

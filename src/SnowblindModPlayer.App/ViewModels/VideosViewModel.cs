@@ -8,6 +8,7 @@ using SnowblindModPlayer.Infrastructure.Services;
 using SnowblindModPlayer.Services;
 using SnowblindModPlayer.UI.MVVM;
 using SnowblindModPlayer.UI.ViewModels;
+using System.IO;
 
 namespace SnowblindModPlayer.ViewModels;
 
@@ -19,12 +20,16 @@ public class VideosViewModel : ViewModelBase
     private readonly ISettingsService _settingsService;
     private readonly PlaybackOrchestrator _playbackOrchestrator;
     private readonly INotificationOrchestrator _notifier;
+    private readonly IThumbnailQueueService _thumbnailQueueService;
     private ObservableCollection<MediaItem> _videos = new();
     private MediaItem? _selectedMedia;
     private readonly ICollectionView _filteredVideos;
     private string _searchText = string.Empty;
     private string _viewMode;
     private ObservableCollection<string> _viewModes = new() { "Tile", "List" };
+    private bool _isImporting;
+    private double _importProgress;
+    private string _importStatus = string.Empty;
 
     public ObservableCollection<MediaItem> Videos
     {
@@ -82,13 +87,32 @@ public class VideosViewModel : ViewModelBase
     public RelayCommand SetDefaultCommand { get; }
     public RelayCommand PlaySelectedCommand { get; }
 
+    public bool IsImporting
+    {
+        get => _isImporting;
+        set => SetProperty(ref _isImporting, value);
+    }
+
+    public double ImportProgress
+    {
+        get => _importProgress;
+        set => SetProperty(ref _importProgress, value);
+    }
+
+    public string ImportStatus
+    {
+        get => _importStatus;
+        set => SetProperty(ref _importStatus, value);
+    }
+
     public VideosViewModel(
         ILibraryService libraryService,
         ILibraryOrchestrator libraryOrchestrator,
         ILibraryChangeNotifier changeNotifier,
         ISettingsService settingsService,
         PlaybackOrchestrator playbackOrchestrator,
-        INotificationOrchestrator notifier)
+        INotificationOrchestrator notifier,
+        IThumbnailQueueService thumbnailQueueService)
     {
         _libraryService = libraryService;
         _libraryOrchestrator = libraryOrchestrator;
@@ -96,6 +120,7 @@ public class VideosViewModel : ViewModelBase
         _settingsService = settingsService;
         _playbackOrchestrator = playbackOrchestrator;
         _notifier = notifier;
+        _thumbnailQueueService = thumbnailQueueService;
 
         _filteredVideos = CollectionViewSource.GetDefaultView(_videos);
         _filteredVideos.Filter = FilterVideo;
@@ -111,6 +136,7 @@ public class VideosViewModel : ViewModelBase
         _changeNotifier.VideoImported += (s, e) => _ = OnLibraryChangedAsync();
         _changeNotifier.VideoRemoved += (s, e) => _ = OnLibraryChangedAsync();
         _changeNotifier.DefaultVideoChanged += (s, e) => _ = OnLibraryChangedAsync();
+        _libraryOrchestrator.ImportProgressChanged += (_, e) => UpdateImportProgress(e);
     }
 
     private bool FilterVideo(object obj)
@@ -173,12 +199,51 @@ public class VideosViewModel : ViewModelBase
 
             // Delegate to LibraryOrchestrator (handles Import + Events + Notifications)
             await _libraryOrchestrator.ImportVideosAsync(dialog.FileNames);
+            await LoadVideosAsync();
+
+            _ = Task.Run(async () =>
+            {
+                await _thumbnailQueueService.WaitForCompletionAsync();
+                await LoadVideosAsync();
+            });
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"Import error: {ex.Message}");
             await _notifier.NotifyErrorAsync($"Import failed: {ex.Message}", ex, NotificationScenario.ImportError);
         }
+    }
+
+    private void UpdateImportProgress(ImportProgressEventArgs args)
+    {
+        Application.Current.Dispatcher.Invoke(() =>
+        {
+            if (args.Total <= 0)
+            {
+                IsImporting = false;
+                ImportProgress = 0;
+                ImportStatus = string.Empty;
+                return;
+            }
+
+            IsImporting = args.Stage != ImportProgressStage.Completed;
+            ImportProgress = Math.Clamp(args.Processed * 100.0 / args.Total, 0, 100);
+            ImportStatus = args.Stage switch
+            {
+                ImportProgressStage.Starting => $"Importing {args.Total} file(s)...",
+                ImportProgressStage.Processing => $"Processing {Path.GetFileName(args.CurrentPath)}",
+                ImportProgressStage.Imported => $"Imported {args.Processed}/{args.Total}",
+                ImportProgressStage.Skipped => $"Skipped {args.Processed}/{args.Total}: {args.Message}",
+                ImportProgressStage.Failed => $"Failed {args.Processed}/{args.Total}: {args.Message}",
+            ImportProgressStage.GeneratingThumbnails => args.Message ?? "Generating thumbnails...",
+                _ => ""
+            };
+
+            if (args.Stage == ImportProgressStage.Completed)
+            {
+                IsImporting = false;
+            }
+        });
     }
 
     private async Task RemoveSelectedAsync()
