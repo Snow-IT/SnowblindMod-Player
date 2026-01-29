@@ -27,6 +27,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IThumbnailQueueService, ThumbnailQueueService>();
         services.AddSingleton<IImportService, ImportService>();
         services.AddSingleton<ILoggingService, LoggingService>();
+        services.AddSingleton<IAutostartService, TaskSchedulerAutostartService>();
         services.AddSingleton<IMonitorService, MonitorService>();
         services.AddSingleton<IPlaybackService, PlaybackService>();
         

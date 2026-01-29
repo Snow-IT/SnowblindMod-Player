@@ -12,13 +12,15 @@ public partial class SettingsView : UserControl
     private readonly ISettingsService _settingsService;
     private readonly INotificationOrchestrator _notifier;
     private readonly ILoggingService _logger;
+    private readonly IAutostartService _autostartService;
     private TextBox? _autoplayDelayTextBox;
 
-    public SettingsView(MonitorSelectionViewModel monitorSelectionViewModel, ISettingsService settingsService, INotificationOrchestrator notifier, ILoggingService logger)
+    public SettingsView(MonitorSelectionViewModel monitorSelectionViewModel, ISettingsService settingsService, INotificationOrchestrator notifier, ILoggingService logger, IAutostartService autostartService)
     {
         _settingsService = settingsService;
         _notifier = notifier;
         _logger = logger;
+        _autostartService = autostartService;
 
         InitializeComponent();
         
@@ -55,6 +57,10 @@ public partial class SettingsView : UserControl
         MinimizeToTrayOnStartupCheckBox.IsChecked = _settingsService.GetMinimizeToTrayOnStartup();
         MinimizeToTrayOnStartupCheckBox.Checked += (s, e) => OnSettingsChanged(() => _settingsService.SetMinimizeToTrayOnStartup(true));
         MinimizeToTrayOnStartupCheckBox.Unchecked += (s, e) => OnSettingsChanged(() => _settingsService.SetMinimizeToTrayOnStartup(false));
+
+        AutostartEnabledCheckBox.IsChecked = _settingsService.GetAutostartEnabled();
+        AutostartEnabledCheckBox.Checked += async (s, e) => await SetAutostartAsync(true);
+        AutostartEnabledCheckBox.Unchecked += async (s, e) => await SetAutostartAsync(false);
 
         var autoplayEnabledCheckBox = (CheckBox)FindName("AutoplayEnabledCheckBox");
         if (autoplayEnabledCheckBox != null)
@@ -96,6 +102,24 @@ public partial class SettingsView : UserControl
                     ThemePreferenceComboBox.SelectedItem = pref;
             });
         });
+    }
+
+    private async Task SetAutostartAsync(bool enabled)
+    {
+        try
+        {
+            OnSettingsChanged(() => _settingsService.SetAutostartEnabled(enabled));
+
+            if (enabled)
+                await _autostartService.EnableAsync();
+            else
+                await _autostartService.DisableAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.Log(LogLevel.Error, "Settings", $"Autostart update failed: {ex.Message}", ex);
+            await _notifier.NotifyErrorAsync($"Autostart update failed: {ex.Message}", ex, NotificationScenario.SettingsSaved);
+        }
     }
 
     private void OnSettingsChanged(Action settingAction)

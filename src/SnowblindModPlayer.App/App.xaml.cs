@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using Microsoft.Extensions.DependencyInjection;
@@ -24,6 +25,8 @@ namespace SnowblindModPlayer
         protected override void OnStartup(StartupEventArgs e)
         {
             base.OnStartup(e);
+
+            var startInTrayArg = e.Args.Any(arg => string.Equals(arg, "--tray", StringComparison.OrdinalIgnoreCase));
 
             try
             {
@@ -191,6 +194,10 @@ namespace SnowblindModPlayer
                             startupWindow.Close();
                             
                             var minimizeToTray = settingsService.GetMinimizeToTrayOnStartup();
+                            if (startInTrayArg)
+                                minimizeToTray = true;
+                            if (startInTrayArg)
+                                minimizeToTray = true;
                             if (minimizeToTray)
                             {
                                 // Start hidden in tray (per spec: Close-to-tray)
